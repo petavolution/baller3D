@@ -2,6 +2,9 @@
  * Game Engine - Particle System
  * Handles particles, explosions, debris, and floating text
  * Reusable across different games
+ *
+ * Includes retro explosion pattern inspired by original Ballerburg (1987)
+ * expls() function by Eckhard Kruse
  */
 
 class ParticleSystem {
@@ -195,6 +198,25 @@ class ParticleSystem {
                 data.velocity.clone().multiplyScalar(deltaTime)
             );
 
+            // Update trail for retro explosion particles
+            if (data.isTrail && data.trailLine) {
+                data.trailPoints.push(particle.position.clone());
+                // Limit trail length
+                if (data.trailPoints.length > 10) {
+                    data.trailPoints.shift();
+                }
+                // Update line geometry
+                const positions = [];
+                data.trailPoints.forEach(p => {
+                    positions.push(p.x, p.y, p.z);
+                });
+                data.trailLine.geometry.setAttribute(
+                    'position',
+                    new THREE.Float32BufferAttribute(positions, 3)
+                );
+                data.trailLine.material.opacity = Math.max(0, data.life);
+            }
+
             // Decay life
             data.life -= data.decay * deltaTime;
 
@@ -208,6 +230,10 @@ class ParticleSystem {
 
             // Remove dead particles
             if (data.life <= 0) {
+                // Clean up trail line if exists
+                if (data.trailLine) {
+                    Utils.removeAndDispose(this.scene, data.trailLine);
+                }
                 Utils.removeAndDispose(this.scene, particle);
                 return false;
             }
@@ -313,6 +339,79 @@ class ParticleSystem {
 
         this.scene.add(sprite);
         this.particles.push(sprite);
+    }
+
+    /**
+     * Create retro-style explosion with trailing lines
+     * Based on original Ballerburg (1987) expls() function
+     * Creates particles that move outward with connecting trails
+     *
+     * @param {THREE.Vector3} position - Center of explosion
+     * @param {Object} options - Explosion options
+     */
+    createRetroExplosion(position, options = {}) {
+        const width = options.width || 8;
+        const height = options.height || 8;
+        const duration = options.duration || 32;
+        const color = options.color || 0xffaa00;
+        const trailCount = options.trailCount || 8;
+
+        // Create trailing particles that spread outward (like original expls)
+        // Original: 16 trail points (8 lines), spread randomly within width/height
+        for (let i = 0; i < trailCount; i++) {
+            // Create trail head particle
+            const geometry = new THREE.SphereGeometry(0.2, 4, 4);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 1
+            });
+
+            const particle = new THREE.Mesh(geometry, material);
+            particle.position.copy(position);
+
+            // Random direction within explosion bounds
+            // Original: x-w+w*(Random()&511)/256, y-h+h*(Random()&511)/256
+            const targetX = (Math.random() * 2 - 1) * width;
+            const targetY = (Math.random() * 2 - 1) * height;
+
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    targetX * 0.5,
+                    targetY * 0.5 + 2,
+                    (Math.random() * 2 - 1) * width * 0.3
+                ),
+                life: duration / 30,
+                decay: 1,
+                shrinkRate: 0.96,
+                isTrail: true,
+                trailPoints: [position.clone()],
+                trailLine: null
+            };
+
+            // Create trail line
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8
+            });
+            const lineGeometry = new THREE.BufferGeometry();
+            const trailLine = new THREE.Line(lineGeometry, lineMaterial);
+            this.scene.add(trailLine);
+            particle.userData.trailLine = trailLine;
+
+            this.scene.add(particle);
+            this.particles.push(particle);
+        }
+
+        // Also create standard explosion particles for fuller effect
+        this.createExplosion(position, {
+            count: Math.floor((options.count || 30) / 2),
+            radius: Math.max(width, height) / 2,
+            colors: [color, 0xff6600],
+            flash: options.flash !== false,
+            vibrate: options.vibrate
+        });
     }
 
     /**
