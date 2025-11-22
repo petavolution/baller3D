@@ -321,9 +321,28 @@ All files should remain under 300 lines for maintainability:
 - [x] Health bar billboard updates
 - [x] Part-based castle damage with impact point
 
-### Phase 6: Worms3D Game - PLANNED
+### Phase 6: Worms3D Game - COMPLETE ✓
 
-### Phase 7: Testing & Polish - PLANNED
+**Game Config & Extensions:**
+- [x] `games/worms3D/js/WormsConfig.js` - Game config with team/worm settings
+- [x] `games/worms3D/js/WormsTerrain.js` - Procedural varied terrain
+
+**Entities:**
+- [x] `games/worms3D/js/Worm.js` - Extends DamageableEntity with movement/aiming
+
+**Game Controller:**
+- [x] `games/worms3D/js/WormsGame.js` - Extends Engine with turn-based worm gameplay
+- [x] `games/worms3D/index.html` - Entry point with controls help
+
+**Features:**
+- [x] Worm movement (walk, jump)
+- [x] Fall damage
+- [x] Team-based turns
+- [x] Bouncing projectiles (grenades)
+- [x] Knockback from explosions
+- [x] Water death zones
+
+### Phase 7: Testing & Polish - IN PROGRESS
 
 ## Next Steps
 
@@ -335,8 +354,11 @@ All files should remain under 300 lines for maintainability:
 6. ~~Create Ballerburg3D game using engine~~ ✓
 7. ~~Migrate entities to use engine base classes~~ ✓
 8. ~~Add weapon selector UI~~ ✓
-9. Create comprehensive tests for engine
-10. Create Worms3D game using engine
+9. ~~Create comprehensive tests for engine~~ ✓
+10. ~~Create Worms3D game using engine~~ ✓
+11. Add input system abstraction to engine
+12. Performance optimization
+13. Mobile touch improvements
 
 ---
 
