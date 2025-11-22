@@ -1,7 +1,7 @@
 ============================================================
 BALLERBURG 3D - TEST RESULTS
 ============================================================
-Started: 2025-11-22T20:48:08.605Z
+Started: 2025-11-22T20:53:45.400Z
 
   ✓ PASS: Config object exists
   ✓ PASS: Config.TERRAIN_WIDTH is valid
@@ -24,14 +24,29 @@ Started: 2025-11-22T20:48:08.605Z
   ✓ PASS: Cannon getFireDirection returns normalized vector
   ✓ PASS: Projectile initializes with cloned position
   ✓ PASS: Projectile update applies gravity
+  ✓ PASS: Utils.clamp works correctly
+  ✓ PASS: Utils.lerp interpolates correctly
+  ✓ PASS: Utils.degToRad converts correctly
+  ✓ PASS: Entity initializes correctly
+  ✓ PASS: Entity.kill marks entity as dead
+  ✓ PASS: Entity.dispose is safe to call multiple times
+  ✓ PASS: DamageableEntity initializes with health
+  ✓ PASS: DamageableEntity.takeDamage reduces health
+  ✓ PASS: DamageableEntity dies at 0 health
+  ✓ PASS: DamageableEntity.heal increases health
+  ✓ PASS: DamageableEntity.heal caps at maxHealth
+  ✓ PASS: DamageableEntity.getHealthPercent returns correct value
+  ✓ PASS: createGameConfig merges with defaults
+  ✓ PASS: createGameConfig overrides defaults
+  ✓ PASS: createGameConfig preserves nested defaults
 
 ============================================================
 SUMMARY
 ============================================================
-Total:  21
-Passed: 21
+Total:  36
+Passed: 36
 Failed: 0
-Duration: 37ms
+Duration: 38ms
 ============================================================
 ALL TESTS PASSED
 
