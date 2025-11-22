@@ -21,7 +21,8 @@ class UI {
             victoryModal: document.getElementById('victoryModal'),
             victoryTitle: document.getElementById('victoryTitle'),
             victoryMessage: document.getElementById('victoryMessage'),
-            restartBtn: document.getElementById('restartBtn')
+            restartBtn: document.getElementById('restartBtn'),
+            fireBtn: document.getElementById('fireBtn')
         };
 
         this.callbacks = {};
@@ -60,6 +61,28 @@ class UI {
         this.elements.restartBtn.addEventListener('click', () => {
             if (this.callbacks.onRestart) this.callbacks.onRestart();
         });
+
+        // Fire button (for mobile/touch)
+        if (this.elements.fireBtn) {
+            const startCharging = (e) => {
+                e.preventDefault();
+                this.elements.fireBtn.classList.add('charging');
+                if (this.callbacks.onChargeStart) this.callbacks.onChargeStart();
+            };
+
+            const stopCharging = (e) => {
+                e.preventDefault();
+                this.elements.fireBtn.classList.remove('charging');
+                if (this.callbacks.onChargeEnd) this.callbacks.onChargeEnd();
+            };
+
+            this.elements.fireBtn.addEventListener('mousedown', startCharging);
+            this.elements.fireBtn.addEventListener('mouseup', stopCharging);
+            this.elements.fireBtn.addEventListener('mouseleave', stopCharging);
+            this.elements.fireBtn.addEventListener('touchstart', startCharging);
+            this.elements.fireBtn.addEventListener('touchend', stopCharging);
+            this.elements.fireBtn.addEventListener('touchcancel', stopCharging);
+        }
     }
 
     /**

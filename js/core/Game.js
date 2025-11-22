@@ -37,6 +37,7 @@ class Game {
         // Animation
         this.lastTime = 0;
         this.trajectoryPoints = [];
+        this._pendingTurnTimeout = null;
 
         try {
             this._init();
@@ -140,7 +141,9 @@ class Game {
             onAngleChange: (v) => this._updateCannon(),
             onDirectionChange: (v) => this._updateCannon(),
             onWeaponChange: (i) => { this.state.currentWeapon = i; },
-            onRestart: () => this.restart()
+            onRestart: () => this.restart(),
+            onChargeStart: () => this._startCharging(),
+            onChargeEnd: () => this._stopCharging()
         });
 
         // Initialize ammo
@@ -204,9 +207,9 @@ class Game {
         }
 
         // Space for charging
-        if (e.key === ' ' && !this.state.charging && !this.projectile) {
+        if (e.key === ' ') {
             e.preventDefault();
-            this.state.charging = true;
+            this._startCharging();
         }
     }
 
@@ -215,9 +218,25 @@ class Game {
      */
     _onKeyUp(e) {
         if (e.key === ' ' && this.state.charging) {
-            this.state.charging = false;
-            this._fire();
+            this._stopCharging();
         }
+    }
+
+    /**
+     * Start charging (keyboard or touch)
+     */
+    _startCharging() {
+        if (this.state.gameOver || this.state.charging || this.projectile) return;
+        this.state.charging = true;
+    }
+
+    /**
+     * Stop charging and fire (keyboard or touch)
+     */
+    _stopCharging() {
+        if (!this.state.charging) return;
+        this.state.charging = false;
+        this._fire();
     }
 
     /**
@@ -364,6 +383,9 @@ class Game {
      * Switch to next turn
      */
     _nextTurn() {
+        // Clear timeout reference
+        this._pendingTurnTimeout = null;
+
         // Clean up projectile
         if (this.projectile) {
             this.projectile.dispose();
@@ -397,12 +419,21 @@ class Game {
     restart() {
         Debug.info('Game: Restarting...');
 
+        // Cancel any pending turn change
+        if (this._pendingTurnTimeout) {
+            clearTimeout(this._pendingTurnTimeout);
+            this._pendingTurnTimeout = null;
+        }
+
         // Cleanup with proper disposal
         this.castles.forEach(c => c.dispose());
         this.cannons.forEach(c => c.dispose());
         if (this.terrain) this.terrain.dispose();
         if (this.physics) this.physics.clear();
-        if (this.projectile) this.projectile.dispose();
+        if (this.projectile) {
+            this.projectile.dispose();
+            this.projectile = null;
+        }
 
         // Dispose trajectory points properly
         this.trajectoryPoints.forEach(p => {
@@ -482,7 +513,7 @@ class Game {
                     }
 
                     // Schedule turn change after brief delay for explosion visibility
-                    setTimeout(() => this._nextTurn(), 1500);
+                    this._pendingTurnTimeout = setTimeout(() => this._nextTurn(), 1500);
                 }
             }
 
