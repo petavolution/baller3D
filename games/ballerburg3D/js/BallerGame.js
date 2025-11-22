@@ -67,11 +67,9 @@ class BallerGame extends Engine {
         // Create water plane
         this._createWater();
 
-        // Create castles
-        const positions = this.config.GAMEPLAY.MOUNTAIN_POSITIONS;
+        // Create castles and cannons
         for (let i = 0; i < this.config.GAMEPLAY.PLAYER_COUNT; i++) {
-            const pos = this.terrain.getCastlePosition(i);
-            const castle = new Castle(this.scene, this.terrain, i);
+            const castle = new Castle(this.scene, this.terrain, i, this.config);
             this.castles.push(castle);
 
             const cannon = new Cannon(this.scene, castle);
