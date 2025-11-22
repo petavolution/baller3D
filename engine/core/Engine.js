@@ -173,6 +173,16 @@ class Engine {
      */
     _setupEventListeners() {
         window.addEventListener('resize', this._boundResize);
+
+        // Mouse wheel zoom
+        window.addEventListener('wheel', (e) => {
+            if (!this.camera) return;
+            this.camera.fov = Utils.clamp(
+                this.camera.fov + e.deltaY * 0.05,
+                30, 90
+            );
+            this.camera.updateProjectionMatrix();
+        });
     }
 
     /**
