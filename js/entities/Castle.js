@@ -173,16 +173,26 @@ class Castle {
     }
 
     /**
-     * Destroy castle
+     * Destroy castle - visual effect then full cleanup
      */
     _destroy() {
+        // Remove health bar immediately
         if (this.healthBarGroup) {
             this.scene.remove(this.healthBarGroup);
+            this.healthBarGroup.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            });
             this.healthBarGroup = null;
         }
 
+        // Delayed removal with full cleanup
         setTimeout(() => {
             this.scene.remove(this.group);
+            this.parts.forEach(part => {
+                if (part.mesh.geometry) part.mesh.geometry.dispose();
+                if (part.mesh.material) part.mesh.material.dispose();
+            });
         }, 2000);
     }
 
@@ -190,13 +200,21 @@ class Castle {
      * Clean up resources
      */
     dispose() {
-        this.scene.remove(this.group);
+        if (this.group) {
+            this.scene.remove(this.group);
+            this.group.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            });
+        }
         if (this.healthBarGroup) {
             this.scene.remove(this.healthBarGroup);
+            this.healthBarGroup.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            });
+            this.healthBarGroup = null;
         }
-        this.parts.forEach(part => {
-            part.mesh.geometry.dispose();
-            part.mesh.material.dispose();
-        });
+        this.parts = [];
     }
 }

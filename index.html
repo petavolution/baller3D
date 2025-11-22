@@ -91,10 +91,17 @@
         </div>
     </div>
 
-    <!-- Three.js from CDN -->
+    <!-- Three.js from CDN (must load first) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Game Modules (load order is critical) -->
+    <!--
+        Game Modules - Load Order (CRITICAL):
+        1. Debug.js  - Logging system (no dependencies)
+        2. Config.js - Game constants (no dependencies)
+        3. Entities  - Terrain → Castle → Cannon → Projectile (depend on Config, THREE)
+        4. Systems   - Physics, UI (depend on Config, THREE)
+        5. Game.js   - Main controller (depends on all above)
+    -->
     <script src="js/core/Debug.js"></script>
     <script src="js/core/Config.js"></script>
     <script src="js/entities/Terrain.js"></script>
