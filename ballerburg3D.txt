@@ -1,0 +1,60 @@
+Core Game Flow:
+
+Initialization → Terrain generation with two mountains → Castle & cannon creation → Game start
+Turn Loop → Player aims cannon → Charges power → Fires → Projectile physics → Impact/explosion → Damage calculation → Next turn
+Win Condition → Castle destroyed → Victory screen → Restart option
+
+Key Ballerburg Features Implemented:
+🏰 Two Medieval Castles
+
+Detailed multi-part castles (towers, walls, roofs)
+Individual part destruction system
+Health bars and damage visualization
+Positioned on mountain peaks like classic Ballerburg
+
+🎯 Cannon Combat System
+
+Realistic cannon models with rotating barrels
+Angle control (10-80°) and direction control (-45° to +45°)
+5 different ammunition types with varying damage/radius
+Power charging system (hold SPACE)
+
+🌍 Physics & Environment
+
+Proper projectile physics with gravity
+Wind effects affecting trajectory
+Destructible terrain (creates craters)
+Trajectory preview system
+
+🎮 User Interface & Controls
+
+Intuitive sliders for cannon aiming
+Weapon selection buttons (1-5 keys or click)
+Power meter visualization
+Turn timer and game status display
+Mobile-friendly touch controls
+
+Verified Working Systems:
+✅ Rendering Pipeline: 3D castles, cannons, projectiles, particles, terrain
+✅ Physics Engine: Gravity, collision detection, terrain destruction
+✅ Game Logic: Turn management, damage calculation, victory conditions
+✅ User Input: Keyboard, mouse, touch controls all functional
+✅ Camera System: Automatic tracking of projectiles and explosions
+✅ Audio-Visual Feedback: Explosions, damage numbers, destruction effects
+The game now delivers the authentic Ballerburg experience in modern 3D - two players commanding castles, strategically aiming cannons across a mountainous battlefield, with the goal of destroying the enemy fortress!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

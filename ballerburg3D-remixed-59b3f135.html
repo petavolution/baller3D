@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Ballerburg 3D - Castle Combat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #98D8E8);
+            user-select: none;
+        }
+        
+        #gameCanvas {
+            display: block;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #weaponSelector {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            pointer-events: all;
+        }
+        
+        .weapon-btn {
+            width: 80px;
+            height: 60px;
+            border: 2px solid #fff;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.3s;
+        }
+        
+        .weapon-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .weapon-btn.active {
+            background: rgba(255, 200, 0, 0.5);
+            border-color: #FFC800;
+            box-shadow: 0 0 10px rgba(255, 200, 0, 0.5);
+        }
+        
+        .weapon-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+        
+        #gameInfo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            font-size: 18px;
+        }
+        
+        #timer {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        #windIndicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #windArrow {
+            font-size: 24px;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+        
+        #cannonControls {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            pointer-events: all;
+        }
+        
+        #cannonControls h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .control-row label {
+            min-width: 80px;
+        }
+        
+        .control-row input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .control-row span {
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        #powerMeter {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        #powerBar {
+            height: 100%;
+            background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
+        #victoryScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        
+        #victoryScreen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFC800;
+        }
+        
+        #restartBtn {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #FFC800;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #restartBtn:hover, #restartBtn:active {
+            background: #FFD700;
+            transform: scale(1.1);
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="gameInfo">
+            <div id="timer">45</div>
+            <div id="currentPlayer">Red Castle's Turn</div>
+            <div id="currentWeapon">Cannonball</div>
+        </div>
+        
+        <div id="windIndicator">
+            <span>Wind:</span>
+            <span id="windArrow">→</span>
+            <span id="windStrength">0.0</span>
+        </div>
+        
+        <div id="cannonControls">
+            <h3>Cannon Aim</h3>
+            <div class="control-row">
+                <label>Angle:</label>
+                <input type="range" id="angleSlider" min="10" max="80" value="45">
+                <span id="angleValue">45°</span>
+            </div>
+            <div class="control-row">
+                <label>Direction:</label>
+                <input type="range" id="directionSlider" min="-45" max="45" value="0">
+                <span id="directionValue">0°</span>
+            </div>
+        </div>
+        
+        <div id="weaponSelector">
+            <div class="weapon-btn active" data-weapon="0">
+                <div class="weapon-icon">⚫</div>
+                <div>Cannonball</div>
+                <div class="ammo">∞</div>
+            </div>
+            <div class="weapon-btn" data-weapon="1">
+                <div class="weapon-icon">💥</div>
+                <div>Explosive</div>
+                <div class="ammo">8</div>
+            </div>
+            <div class="weapon-btn" data-weapon="2">
+                <div class="weapon-icon">⛓️</div>
+                <div>Chain Shot</div>
+                <div class="ammo">6</div>
+            </div>
+            <div class="weapon-btn" data-weapon="3">
+                <div class="weapon-icon">🔥</div>
+                <div>Fire Ball</div>
+                <div class="ammo">10</div>
+            </div>
+            <div class="weapon-btn" data-weapon="4">
+                <div class="weapon-icon">🪨</div>
+                <div>Stone Ball</div>
+                <div class="ammo">∞</div>
+            </div>
+        </div>
+        
+        <div id="powerMeter">
+            <div id="powerBar"></div>
+        </div>
+        
+        <div id="controls">
+            <div><strong>BALLERBURG</strong></div>
+            <div>Hold SPACE: Charge Power</div>
+            <div>Sliders: Aim Cannon</div>
+            <div>1-5: Select Ammunition</div>
+        </div>
+    </div>
+    
+    <div id="victoryScreen">
+        <h1>Victory!</h1>
+        <div id="winnerText">Red Castle Wins!</div>
+        <button id="restartBtn">New Battle</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game Constants - Ballerburg Style
+        const TERRAIN_WIDTH = 120;
+        const TERRAIN_DEPTH = 20;
+        const TERRAIN_HEIGHT = 40;
+        const GRAVITY = -9.8;
+        const TURN_TIME = 45;
+        const MAX_POWER = 35;
+        
+        // Weapon definitions - Ballerburg style
+        const WEAPONS = [
+            { name: 'Cannonball', damage: 60, radius: 8, projectileSpeed: 1, ammo: -1, icon: '⚫' },
+            { name: 'Explosive Shell', damage: 80, radius: 12, projectileSpeed: 0.9, ammo: 8, icon: '💥' },
+            { name: 'Chain Shot', damage: 40, radius: 15, projectileSpeed: 0.7, ammo: 6, icon: '⛓️' },
+            { name: 'Fire Ball', damage: 45, radius: 10, projectileSpeed: 1.1, ammo: 10, icon: '🔥' },
+            { name: 'Stone Ball', damage: 35, radius: 6, projectileSpeed: 1.3, ammo: -1, icon: '🪨' }
+        ];
+        
+        // Three.js setup
+        let scene, camera, renderer;
+        let terrain, terrainMesh;
+        let castles = []; // Two castles
+        let cannons = []; // One cannon per castle
+        let projectiles = [];
+        let particles = [];
+        let trajectoryPoints = [];
+        
+        // Game state
+        let currentPlayer = 0; // 0 = left castle, 1 = right castle
+        let currentWeapon = 0;
+        let turnTimer = TURN_TIME;
+        let windStrength = 0;
+        let windDirection = 1;
+        let isCharging = false;
+        let chargePower = 0;
+        let gameOver = false;
+        let cannonAngle = 45; // Vertical angle
+        let cannonDirection = 0; // Horizontal direction
+        let weaponAmmo = {};
+        let cameraTarget = null;
+        let activeProjectile = null;
+        
+        // Input state
+        const keys = {};
+        let isMobile = false;
+        
+        class Castle {
+            constructor(x, z, player) {
+                this.position = new THREE.Vector3(x, 0, z);
+                this.player = player;
+                this.health = 100;
+                this.alive = true;
+                this.parts = []; // Castle parts that can be destroyed
+                
+                // Create castle group
+                this.meshGroup = new THREE.Group();
+                
+                // Player colors - brown and gray castles
+                const playerColor = player === 0 ? 0x8B4513 : 0x4A4A4A; // Brown vs Gray stone
+                const roofColor = player === 0 ? 0xCC0000 : 0x0066CC;   // Red vs Blue roofs
+                
+                const stoneMaterial = new THREE.MeshPhongMaterial({
+                    color: playerColor,
+                    shininess: 10
+                });
+                const roofMaterial = new THREE.MeshPhongMaterial({
+                    color: roofColor,
+                    shininess: 30
+                });
+                
+                // Build castle from bottom up
+                // Base foundation
+                const baseGeometry = new THREE.BoxGeometry(8, 3, 6);
+                const baseMesh = new THREE.Mesh(baseGeometry, stoneMaterial);
+                baseMesh.position.y = 1.5;
+                baseMesh.castShadow = true;
+                baseMesh.receiveShadow = true;
+                this.meshGroup.add(baseMesh);
+                this.parts.push({ mesh: baseMesh, health: 30, type: 'base' });
+                
+                // Main tower
+                const towerGeometry = new THREE.BoxGeometry(5, 8, 5);
+                const towerMesh = new THREE.Mesh(towerGeometry, stoneMaterial);
+                towerMesh.position.y = 7;
+                towerMesh.castShadow = true;
+                towerMesh.receiveShadow = true;
+                this.meshGroup.add(towerMesh);
+                this.parts.push({ mesh: towerMesh, health: 40, type: 'tower' });
+                
+                // Tower roof (pyramid)
+                const roofGeometry = new THREE.ConeGeometry(3.5, 4, 8);
+                const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
+                roofMesh.position.y = 13;
+                roofMesh.castShadow = true;
+                this.meshGroup.add(roofMesh);
+                this.parts.push({ mesh: roofMesh, health: 20, type: 'roof' });
+                
+                // Side towers (smaller)
+                for (let i = 0; i < 2; i++) {
+                    const sideX = i === 0 ? -4 : 4;
+                    
+                    const sideTowerGeometry = new THREE.BoxGeometry(3, 6, 3);
+                    const sideTowerMesh = new THREE.Mesh(sideTowerGeometry, stoneMaterial);
+                    sideTowerMesh.position.set(sideX, 6, 0);
+                    sideTowerMesh.castShadow = true;
+                    sideTowerMesh.receiveShadow = true;
+                    this.meshGroup.add(sideTowerMesh);
+                    this.parts.push({ mesh: sideTowerMesh, health: 25, type: 'side_tower' });
+                    
+                    const sideRoofGeometry = new THREE.ConeGeometry(2.2, 3, 6);
+                    const sideRoofMesh = new THREE.Mesh(sideRoofGeometry, roofMaterial);
+                    sideRoofMesh.position.set(sideX, 10.5, 0);
+                    sideRoofMesh.castShadow = true;
+                    this.meshGroup.add(sideRoofMesh);
+                    this.parts.push({ mesh: sideRoofMesh, health: 10, type: 'side_roof' });
+                }
+                
+                // Castle walls
+                const wallPositions = [
+                    { x: 0, z: -4, w: 8, h: 5, d: 1 }, // Back wall
+                    { x: -5, z: 0, w: 1, h: 4, d: 4 }, // Left wall  
+                    { x: 5, z: 0, w: 1, h: 4, d: 4 }   // Right wall
+                ];
+                
+                wallPositions.forEach((wall, index) => {
+                    const wallGeometry = new THREE.BoxGeometry(wall.w, wall.h, wall.d);
+                    const wallMesh = new THREE.Mesh(wallGeometry, stoneMaterial);
+                    wallMesh.position.set(wall.x, wall.h / 2, wall.z);
+                    wallMesh.castShadow = true;
+                    wallMesh.receiveShadow = true;
+                    this.meshGroup.add(wallMesh);
+                    this.parts.push({ mesh: wallMesh, health: 15, type: 'wall' });
+                });
+                
+                // Flag on main tower
+                const flagPoleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 2);
+                const flagPoleMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
+                const flagPole = new THREE.Mesh(flagPoleGeometry, flagPoleMaterial);
+                flagPole.position.y = 16;
+                this.meshGroup.add(flagPole);
+                
+                const flagGeometry = new THREE.PlaneGeometry(1.5, 1);
+                const flagMesh = new THREE.Mesh(flagGeometry, roofMaterial);
+                flagMesh.position.set(0.75, 16.5, 0);
+                this.meshGroup.add(flagMesh);
+                
+                // Health bar
+                this.createHealthBar();
+                
+                scene.add(this.meshGroup);
+                this.updatePosition();
+            }
+            
+            createHealthBar() {
+                this.healthBarContainer = new THREE.Group();
+                this.healthBarContainer.position.copy(this.position);
+                this.healthBarContainer.position.y += 18;
+                
+                // Health bar background
+                const healthBarBg = new THREE.Mesh(
+                    new THREE.PlaneGeometry(6, 0.5),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x000000, 
+                        transparent: true, 
+                        opacity: 0.7,
+                        side: THREE.DoubleSide
+                    })
+                );
+                this.healthBarContainer.add(healthBarBg);
+                
+                // Health bar fill
+                this.healthBar = new THREE.Mesh(
+                    new THREE.PlaneGeometry(5.8, 0.4),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x00ff00,
+                        side: THREE.DoubleSide
+                    })
+                );
+                this.healthBarContainer.add(this.healthBar);
+                
+                scene.add(this.healthBarContainer);
+            }
+            
+            updatePosition() {
+                const terrainHeight = getTerrainHeight(this.position.x, this.position.z);
+                this.position.y = terrainHeight;
+                this.meshGroup.position.copy(this.position);
+                
+                if (this.healthBarContainer && camera) {
+                    this.healthBarContainer.position.x = this.position.x;
+                    this.healthBarContainer.position.y = this.position.y + 18;
+                    this.healthBarContainer.position.z = this.position.z;
+                    
+                    // Face camera
+                    this.healthBarContainer.lookAt(camera.position);
+                    
+                    // Update health bar
+                    const healthPercent = Math.max(0.01, this.health / 100);
+                    this.healthBar.scale.x = healthPercent;
+                    this.healthBar.position.x = (healthPercent - 1) * 2.9;
+                    
+                    const color = this.health > 60 ? 0x00ff00 : (this.health > 30 ? 0xffff00 : 0xff0000);
+                    if (this.healthBar.material.color.getHex() !== color) {
+                        this.healthBar.material.color.setHex(color);
+                    }
+                }
+            }
+            
+            takeDamage(damage, impactPoint) {
+                // Find closest castle part to impact
+                let closestPart = null;
+                let closestDistance = Infinity;
+                
+                this.parts.forEach(part => {
+                    if (!part.destroyed) {
+                        const partWorldPos = new THREE.Vector3();
+                        part.mesh.getWorldPosition(partWorldPos);
+                        const distance = partWorldPos.distanceTo(impactPoint);
+                        
+                        if (distance < closestDistance) {
+                            closestDistance = distance;
+                            closestPart = part;
+                        }
+                    }
+                });
+                
+                // Damage the castle part and overall castle
+                if (closestPart && closestDistance < 8) {
+                    closestPart.health -= damage * 0.7;
+                    this.health -= damage * 0.3;
+                    
+                    // Destroy part if health is depleted
+                    if (closestPart.health <= 0 && !closestPart.destroyed) {
+                        closestPart.destroyed = true;
+                        // Create destruction effect
+                        createRubble(closestPart.mesh.position.clone().add(this.position));
+                        
+                        // Remove the part visually
+                        closestPart.mesh.material.transparent = true;
+                        closestPart.mesh.material.opacity = 0.3;
+                        closestPart.mesh.material.color.setHex(0x333333);
+                    }
+                } else {
+                    this.health -= damage * 0.2; // Reduced damage for distant hits
+                }
+                
+                this.health = Math.max(0, this.health);
+                
+                // Show damage number
+                if (damage > 0 && this.alive) {
+                    this.showDamageNumber(damage, impactPoint);
+                }
+                
+                if (this.health <= 0 && this.alive) {
+                    this.alive = false;
+                    this.destroyCastle();
+                }
+            }
+            
+            showDamageNumber(damage, position) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.font = 'bold 48px Arial';
+                ctx.fillStyle = damage > 40 ? '#ff0000' : '#ffaa00';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText('-' + Math.floor(damage), 64, 48);
+                ctx.fillText('-' + Math.floor(damage), 64, 48);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ 
+                    map: texture,
+                    transparent: true
+                });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.copy(position);
+                sprite.position.y += 5;
+                sprite.scale.set(4, 2, 1);
+                scene.add(sprite);
+                
+                const animateDamage = () => {
+                    sprite.position.y += 0.1;
+                    sprite.material.opacity -= 0.02;
+                    if (sprite.material.opacity > 0) {
+                        requestAnimationFrame(animateDamage);
+                    } else {
+                        scene.remove(sprite);
+                        sprite.material.dispose();
+                        texture.dispose();
+                    }
+                };
+                animateDamage();
+            }
+            
+            destroyCastle() {
+                // Create massive explosion
+                createExplosion(this.position.clone().add(new THREE.Vector3(0, 8, 0)), 15);
+                
+                // Remove health bar
+                if (this.healthBarContainer) {
+                    scene.remove(this.healthBarContainer);
+                    this.healthBarContainer = null;
+                }
+                
+                // Gradual destruction of remaining parts
+                setTimeout(() => {
+                    if (this.meshGroup) {
+                        scene.remove(this.meshGroup);
+                    }
+                }, 2000);
+            }
+        }
+        
+        class Cannon {
+            constructor(castle) {
+                this.castle = castle;
+                this.position = castle.position.clone();
+                this.position.y += 12; // On top of main tower
+                this.verticalAngle = 45;
+                this.horizontalDirection = 0; // Relative to facing direction
+                
+                // Create cannon group
+                this.meshGroup = new THREE.Group();
+                
+                const cannonMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x444444,
+                    shininess: 50
+                });
+                
+                // Cannon base
+                const baseGeometry = new THREE.CylinderGeometry(0.8, 1, 1.5);
+                const baseMesh = new THREE.Mesh(baseGeometry, cannonMaterial);
+                baseMesh.position.y = 0.75;
+                baseMesh.castShadow = true;
+                this.meshGroup.add(baseMesh);
+                
+                // Cannon barrel
+                const barrelGeometry = new THREE.CylinderGeometry(0.3, 0.4, 4);
+                this.barrelMesh = new THREE.Mesh(barrelGeometry, cannonMaterial);
+                this.barrelMesh.position.y = 1.5;
+                this.barrelMesh.castShadow = true;
+                this.meshGroup.add(this.barrelMesh);
+                
+                // Cannon wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.2);
+                const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+                
+                for (let i = 0; i < 2; i++) {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.position.set(i === 0 ? -1.2 : 1.2, 0.6, 0);
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.castShadow = true;
+                    this.meshGroup.add(wheel);
+                }
+                
+                this.meshGroup.position.copy(this.position);
+                this.updateRotation();
+                scene.add(this.meshGroup);
+            }
+            
+            updateRotation() {
+                // Base direction: left castle faces right (0°), right castle faces left (180°)
+                const baseDirection = this.castle.player === 0 ? 0 : 180;
+                const finalDirection = baseDirection + this.horizontalDirection;
+                
+                this.meshGroup.rotation.y = finalDirection * Math.PI / 180;
+                this.barrelMesh.rotation.z = -this.verticalAngle * Math.PI / 180;
+            }
+            
+            getFirePosition() {
+                const barrelEnd = new THREE.Vector3(0, 2, 0);
+                const barrelLength = 2;
+                
+                // Base direction for the castle
+                const baseDirection = this.castle.player === 0 ? 0 : 180;
+                const finalDirection = baseDirection + this.horizontalDirection;
+                
+                // Apply rotations to get world fire position
+                barrelEnd.x += Math.sin(finalDirection * Math.PI / 180) * 
+                              Math.cos(this.verticalAngle * Math.PI / 180) * barrelLength;
+                barrelEnd.y += Math.sin(this.verticalAngle * Math.PI / 180) * barrelLength;
+                barrelEnd.z += Math.cos(finalDirection * Math.PI / 180) * 
+                              Math.cos(this.verticalAngle * Math.PI / 180) * barrelLength;
+                
+                return this.position.clone().add(barrelEnd);
+            }
+            
+            getFireDirection() {
+                const baseDirection = this.castle.player === 0 ? 0 : 180;
+                const finalDirection = baseDirection + this.horizontalDirection;
+                
+                const direction = new THREE.Vector3(
+                    Math.sin(finalDirection * Math.PI / 180) * Math.cos(this.verticalAngle * Math.PI / 180),
+                    Math.sin(this.verticalAngle * Math.PI / 180),
+                    Math.cos(finalDirection * Math.PI / 180) * Math.cos(this.verticalAngle * Math.PI / 180)
+                );
+                return direction.normalize();
+            }
+        }
+        
+        class Projectile {
+            constructor(position, velocity, weapon) {
+                this.position = position.clone();
+                this.velocity = velocity.clone();
+                this.weapon = weapon;
+                this.exploded = false;
+                
+                const geometry = new THREE.SphereGeometry(0.4, 8, 8);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x222222,
+                    emissive: 0x440000,
+                    emissiveIntensity: 0.3
+                });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.castShadow = true;
+                scene.add(this.mesh);
+                
+                this.trail = [];
+            }
+            
+            update(deltaTime) {
+                if (this.exploded) return false;
+                
+                this.velocity.y += GRAVITY * deltaTime;
+                this.velocity.x += windStrength * windDirection * deltaTime * 0.3;
+                
+                const oldPos = this.position.clone();
+                this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+                
+                this.trail.push(this.position.clone());
+                if (this.trail.length > 15) this.trail.shift();
+                
+                // Check collision with terrain
+                const steps = 5;
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const checkX = oldPos.x + (this.position.x - oldPos.x) * t;
+                    const checkY = oldPos.y + (this.position.y - oldPos.y) * t;
+                    const checkZ = oldPos.z + (this.position.z - oldPos.z) * t;
+                    
+                    const terrainY = getTerrainHeight(checkX, checkZ);
+                    
+                    if (checkY <= terrainY) {
+                        this.position.set(checkX, terrainY, checkZ);
+                        this.explode();
+                        return false;
+                    }
+                }
+                
+                // Check if projectile is out of bounds
+                if (Math.abs(this.position.x) > TERRAIN_WIDTH/2 + 20 ||
+                    Math.abs(this.position.z) > TERRAIN_DEPTH/2 + 20 ||
+                    this.position.y < -15) {
+                    
+                    scene.remove(this.mesh);
+                    return false;
+                }
+                
+                this.mesh.position.copy(this.position);
+                return true;
+            }
+            
+            explode() {
+                this.exploded = true;
+                scene.remove(this.mesh);
+                
+                // Keep camera on explosion briefly
+                if (this === activeProjectile) {
+                    cameraTarget = this.position.clone();
+                    activeProjectile = null;
+                }
+                
+                createExplosion(this.position, this.weapon.radius);
+                destroyTerrain(this.position, this.weapon.radius);
+                
+                // Damage castles
+                castles.forEach(castle => {
+                    if (!castle.alive) return;
+                    
+                    const distance = castle.position.distanceTo(this.position);
+                    if (distance < this.weapon.radius + 8) { // Larger damage radius for castles
+                        const damage = Math.floor(this.weapon.damage * (1 - distance / (this.weapon.radius + 8)));
+                        castle.takeDamage(damage, this.position);
+                    }
+                });
+            }
+        }
+        
+        function createRubble(position) {
+            const rubbleCount = 8;
+            
+            for (let i = 0; i < rubbleCount; i++) {
+                const geometry = new THREE.BoxGeometry(
+                    Math.random() * 0.8 + 0.3,
+                    Math.random() * 0.8 + 0.3,
+                    Math.random() * 0.8 + 0.3
+                );
+                const material = new THREE.MeshPhongMaterial({
+                    color: Math.random() > 0.5 ? 0x8B4513 : 0x654321,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const rubble = new THREE.Mesh(geometry, material);
+                rubble.position.copy(position);
+                rubble.position.add(new THREE.Vector3(
+                    (Math.random() - 0.5) * 4,
+                    Math.random() * 2,
+                    (Math.random() - 0.5) * 4
+                ));
+                
+                const velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 8,
+                    Math.random() * 10 + 5,
+                    (Math.random() - 0.5) * 8
+                );
+                
+                rubble.userData = {
+                    velocity: velocity,
+                    life: 3 + Math.random() * 2,
+                    decay: 0.3
+                };
+                
+                scene.add(rubble);
+                particles.push(rubble);
+            }
+        }
+        
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 80, 200);
+            
+            // Camera - positioned for good view of both castles
+            camera = new THREE.PerspectiveCamera(
+                50,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 40, 60);
+            camera.lookAt(0, 15, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('gameCanvas'),
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setClearColor(0x87CEEB);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -100;
+            directionalLight.shadow.camera.right = 100;
+            directionalLight.shadow.camera.top = 100;
+            directionalLight.shadow.camera.bottom = -100;
+            directionalLight.shadow.camera.near = 1;
+            directionalLight.shadow.camera.far = 300;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Sky
+            const skyGeometry = new THREE.BoxGeometry(800, 800, 800);
+            const skyMaterial = new THREE.MeshBasicMaterial({
+                color: 0x87CEEB,
+                side: THREE.BackSide
+            });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+            
+            // Water plane
+            const waterGeometry = new THREE.PlaneGeometry(400, 400);
+            const waterMaterial = new THREE.MeshPhongMaterial({
+                color: 0x006994,
+                transparent: true,
+                opacity: 0.8,
+                shininess: 100,
+                side: THREE.DoubleSide
+            });
+            const water = new THREE.Mesh(waterGeometry, waterMaterial);
+            water.rotation.x = -Math.PI / 2;
+            water.position.y = -10;
+            water.receiveShadow = true;
+            scene.add(water);
+            
+            // Initialize ammo
+            WEAPONS.forEach((weapon, index) => {
+                weaponAmmo[index] = weapon.ammo;
+            });
+            
+            // Generate terrain and create game elements
+            generateTerrain();
+            setTimeout(() => {
+                createCastles();
+                createCannons();
+                setupControls();
+            }, 100);
+            
+            // Set wind and start game
+            randomizeWind();
+            setupEventListeners();
+            animate(0);
+        }
+        
+        function generateTerrain() {
+            const width = TERRAIN_WIDTH;
+            const depth = TERRAIN_DEPTH;
+            const segments = 100;
+            
+            // Generate Ballerburg-style terrain: two mountains with valley
+            terrain = [];
+            for (let i = 0; i <= segments; i++) {
+                terrain[i] = [];
+                for (let j = 0; j <= segments; j++) {
+                    const x = (i / segments - 0.5) * width;
+                    const z = (j / segments - 0.5) * depth;
+                    
+                    let height = -5; // Base level (water)
+                    
+                    // Left Mountain (for left castle)
+                    const leftMountainX = -40;
+                    const distToLeftMountain = Math.sqrt(Math.pow(x - leftMountainX, 2) + Math.pow(z, 2));
+                    if (distToLeftMountain < 25) {
+                        const mountainHeight = Math.max(0, 30 - distToLeftMountain * 1.2);
+                        height = Math.max(height, mountainHeight);
+                    }
+                    
+                    // Right Mountain (for right castle)
+                    const rightMountainX = 40;
+                    const distToRightMountain = Math.sqrt(Math.pow(x - rightMountainX, 2) + Math.pow(z, 2));
+                    if (distToRightMountain < 25) {
+                        const mountainHeight = Math.max(0, 30 - distToRightMountain * 1.2);
+                        height = Math.max(height, mountainHeight);
+                    }
+                    
+                    // Add some terrain variations
+                    height += (Math.random() - 0.5) * 2;
+                    
+                    // Ensure edges slope down
+                    const edgeX = Math.abs(i / segments - 0.5) * 2;
+                    const edgeZ = Math.abs(j / segments - 0.5) * 2;
+                    const edgeFactor = Math.max(edgeX, edgeZ);
+                    
+                    if (edgeFactor > 0.8) {
+                        const smoothFactor = Math.cos((edgeFactor - 0.8) * Math.PI / 0.4) * 0.5 + 0.5;
+                        height *= smoothFactor;
+                    }
+                    
+                    terrain[i][j] = Math.max(-10, Math.min(35, height));
+                }
+            }
+            
+            // Light smoothing
+            const smoothed = [];
+            for (let i = 0; i <= segments; i++) {
+                smoothed[i] = [];
+                for (let j = 0; j <= segments; j++) {
+                    let sum = terrain[i][j] * 4;
+                    let count = 4;
+                    
+                    if (i > 0) { sum += terrain[i-1][j]; count++; }
+                    if (i < segments) { sum += terrain[i+1][j]; count++; }
+                    if (j > 0) { sum += terrain[i][j-1]; count++; }
+                    if (j < segments) { sum += terrain[i][j+1]; count++; }
+                    
+                    smoothed[i][j] = sum / count;
+                }
+            }
+            terrain = smoothed;
+            
+            updateTerrainMesh();
+        }
+        
+        function updateTerrainMesh() {
+            if (terrainMesh) {
+                scene.remove(terrainMesh);
+                terrainMesh.geometry.dispose();
+                terrainMesh.material.dispose();
+            }
+            
+            const width = TERRAIN_WIDTH;
+            const depth = TERRAIN_DEPTH;
+            const segments = terrain.length - 1;
+            
+            // Create terrain geometry
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            const uvs = [];
+            const indices = [];
+            
+            // Generate vertices
+            for (let i = 0; i <= segments; i++) {
+                for (let j = 0; j <= segments; j++) {
+                    const x = (i / segments - 0.5) * width;
+                    const z = (j / segments - 0.5) * depth;
+                    const y = terrain[i][j];
+                    
+                    vertices.push(x, y, z);
+                    uvs.push(i / segments, j / segments);
+                }
+            }
+            
+            // Generate indices for triangles
+            for (let i = 0; i < segments; i++) {
+                for (let j = 0; j < segments; j++) {
+                    const a = i * (segments + 1) + j;
+                    const b = a + 1;
+                    const c = a + segments + 1;
+                    const d = c + 1;
+                    
+                    indices.push(a, c, b);
+                    indices.push(b, c, d);
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x4a5d23,
+                shininess: 5,
+                side: THREE.DoubleSide
+            });
+            
+            terrainMesh = new THREE.Mesh(geometry, material);
+            terrainMesh.receiveShadow = true;
+            terrainMesh.castShadow = true;
+            scene.add(terrainMesh);
+        }
+        
+        function getTerrainHeight(x, z) {
+            const width = TERRAIN_WIDTH;
+            const depth = TERRAIN_DEPTH;
+            const segments = terrain.length - 1;
+            
+            const tx = (x / width + 0.5);
+            const tz = (z / depth + 0.5);
+            
+            if (tx < 0 || tx > 1 || tz < 0 || tz > 1) {
+                return -100;
+            }
+            
+            const i = tx * segments;
+            const j = tz * segments;
+            
+            const i0 = Math.floor(i);
+            const j0 = Math.floor(j);
+            const i1 = Math.min(i0 + 1, segments);
+            const j1 = Math.min(j0 + 1, segments);
+            
+            const fx = i - i0;
+            const fz = j - j0;
+            
+            const h00 = terrain[i0][j0];
+            const h10 = terrain[i1][j0];
+            const h01 = terrain[i0][j1];
+            const h11 = terrain[i1][j1];
+            
+            const h0 = h00 * (1 - fx) + h10 * fx;
+            const h1 = h01 * (1 - fx) + h11 * fx;
+            
+            return h0 * (1 - fz) + h1 * fz;
+        }
+        
+        function destroyTerrain(position, radius) {
+            const width = TERRAIN_WIDTH;
+            const depth = TERRAIN_DEPTH;
+            const segments = terrain.length - 1;
+            
+            let terrainModified = false;
+            
+            for (let i = 0; i <= segments; i++) {
+                for (let j = 0; j <= segments; j++) {
+                    const x = (i / segments - 0.5) * width;
+                    const z = (j / segments - 0.5) * depth;
+                    const y = terrain[i][j];
+                    
+                    const dx = x - position.x;
+                    const dy = y - position.y;
+                    const dz = z - position.z;
+                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    
+                    if (distance < radius) {
+                        const factor = 1 - (distance / radius);
+                        const destruction = factor * factor * radius * 0.6;
+                        terrain[i][j] -= destruction;
+                        terrain[i][j] = Math.max(-10, terrain[i][j]);
+                        terrainModified = true;
+                    }
+                }
+            }
+            
+            if (terrainModified) {
+                updateTerrainMesh();
+            }
+        }
+        
+        function createCastles() {
+            castles = [];
+            
+            // Left castle (Red)
+            const leftCastle = new Castle(-40, 0, 0);
+            castles.push(leftCastle);
+            
+            // Right castle (Blue)
+            const rightCastle = new Castle(40, 0, 1);
+            castles.push(rightCastle);
+        }
+        
+        function createCannons() {
+            cannons = [];
+            
+            castles.forEach(castle => {
+                const cannon = new Cannon(castle);
+                cannons.push(cannon);
+            });
+        }
+        
+        function getCurrentCannon() {
+            return cannons[currentPlayer];
+        }
+        
+        function setupControls() {
+            // Angle slider
+            const angleSlider = document.getElementById('angleSlider');
+            const angleValue = document.getElementById('angleValue');
+            
+            angleSlider.addEventListener('input', (e) => {
+                cannonAngle = parseInt(e.target.value);
+                angleValue.textContent = cannonAngle + '°';
+                
+                const cannon = getCurrentCannon();
+                if (cannon) {
+                    cannon.verticalAngle = cannonAngle;
+                    cannon.updateRotation();
+                    updateTrajectory();
+                }
+            });
+            
+            // Direction slider
+            const directionSlider = document.getElementById('directionSlider');
+            const directionValue = document.getElementById('directionValue');
+            
+            directionSlider.addEventListener('input', (e) => {
+                cannonDirection = parseInt(e.target.value);
+                directionValue.textContent = cannonDirection + '°';
+                
+                const cannon = getCurrentCannon();
+                if (cannon) {
+                    cannon.horizontalDirection = cannonDirection;
+                    cannon.updateRotation();
+                    updateTrajectory();
+                }
+            });
+        }
+        
+        function nextTurn() {
+            projectiles.forEach(p => scene.remove(p.mesh));
+            projectiles = [];
+            
+            activeProjectile = null;
+            cameraTarget = null;
+            
+            currentPlayer = 1 - currentPlayer;
+            
+            if (castles.filter(c => c.alive).length < 2) {
+                endGame();
+                return;
+            }
+            
+            turnTimer = TURN_TIME;
+            randomizeWind();
+            updateUI();
+            
+            const cannon = getCurrentCannon();
+            if (cannon) {
+                focusCamera(cannon.position, false);
+            }
+        }
+        
+        function randomizeWind() {
+            windStrength = Math.random() * 4;
+            windDirection = Math.random() > 0.5 ? 1 : -1;
+            
+            const windArrow = document.getElementById('windArrow');
+            const windStrengthEl = document.getElementById('windStrength');
+            
+            windArrow.style.transform = windDirection > 0 ? 'scaleX(1)' : 'scaleX(-1)';
+            windStrengthEl.textContent = windStrength.toFixed(1);
+        }
+        
+        function focusCamera(target, smooth = true) {
+            if (!target) return;
+            
+            let targetPosition = target;
+            if (target.position) {
+                targetPosition = target.position;
+            }
+            
+            let offset;
+            if (activeProjectile && target === activeProjectile.position) {
+                offset = new THREE.Vector3(0, 20, 50);
+            } else {
+                offset = new THREE.Vector3(0, 40, 60);
+            }
+            
+            const desiredPosition = targetPosition.clone().add(offset);
+            
+            if (smooth) {
+                camera.position.lerp(desiredPosition, 0.1);
+            } else {
+                camera.position.copy(desiredPosition);
+            }
+            
+            camera.lookAt(targetPosition);
+        }
+        
+        function fireWeapon() {
+            const cannon = getCurrentCannon();
+            const castle = castles[currentPlayer];
+            if (!cannon || !castle || !castle.alive) return;
+            
+            const weapon = WEAPONS[currentWeapon];
+            
+            if (weapon.ammo !== -1 && weaponAmmo[currentWeapon] <= 0) {
+                return;
+            }
+            
+            const firePosition = cannon.getFirePosition();
+            const fireDirection = cannon.getFireDirection();
+            
+            const power = chargePower / 100 * MAX_POWER;
+            const velocity = fireDirection.clone().multiplyScalar(power);
+            
+            const projectile = new Projectile(firePosition, velocity, weapon);
+            projectiles.push(projectile);
+            activeProjectile = projectile;
+            cameraTarget = projectile.position;
+            
+            if (weapon.ammo !== -1) {
+                weaponAmmo[currentWeapon]--;
+                updateWeaponUI();
+            }
+            
+            // Clear camera targets after some time
+            setTimeout(() => {
+                activeProjectile = null;
+                cameraTarget = null;
+            }, 4000);
+            
+            setTimeout(() => {
+                nextTurn();
+            }, 6000);
+        }
+        
+        function createExplosion(position, radius) {
+            const particleCount = 60;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.SphereGeometry(Math.random() * 0.8 + 0.3, 6, 6);
+                const material = new THREE.MeshBasicMaterial({
+                    color: Math.random() > 0.5 ? 0xff6600 : 0xffaa00,
+                    transparent: true,
+                    opacity: 1
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.copy(position);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * radius + radius/2;
+                const velocity = new THREE.Vector3(
+                    Math.cos(angle) * speed,
+                    Math.random() * radius + radius/2,
+                    Math.sin(angle) * speed
+                );
+                
+                particle.userData = {
+                    velocity: velocity,
+                    life: 1,
+                    decay: Math.random() * 0.015 + 0.01
+                };
+                
+                scene.add(particle);
+                particles.push(particle);
+            }
+            
+            const light = new THREE.PointLight(0xff6600, 15, radius * 4);
+            light.position.copy(position);
+            scene.add(light);
+            
+            setTimeout(() => scene.remove(light), 300);
+        }
+        
+        function updateParticles(deltaTime) {
+            particles = particles.filter(particle => {
+                particle.userData.velocity.y -= GRAVITY * deltaTime;
+                particle.position.add(particle.userData.velocity.clone().multiplyScalar(deltaTime));
+                
+                particle.userData.life -= particle.userData.decay;
+                particle.material.opacity = particle.userData.life;
+                particle.scale.multiplyScalar(0.98);
+                
+                if (particle.userData.life <= 0) {
+                    scene.remove(particle);
+                    particle.material.dispose();
+                    return false;
+                }
+                return true;
+            });
+        }
+        
+        function updateUI() {
+            const castle = castles[currentPlayer];
+            if (!castle) return;
+            
+            document.getElementById('currentPlayer').textContent = `${castle.player === 0 ? 'Red' : 'Blue'} Castle's Turn`;
+            document.getElementById('currentWeapon').textContent = WEAPONS[currentWeapon].name;
+            document.getElementById('timer').textContent = Math.ceil(turnTimer);
+        }
+        
+        function updateWeaponUI() {
+            document.querySelectorAll('.weapon-btn').forEach((btn, index) => {
+                const weapon = WEAPONS[index];
+                const ammoEl = btn.querySelector('.ammo');
+                
+                if (weapon.ammo === -1) {
+                    ammoEl.textContent = '∞';
+                } else {
+                    ammoEl.textContent = weaponAmmo[index];
+                    if (weaponAmmo[index] === 0) {
+                        btn.style.opacity = '0.5';
+                    } else {
+                        btn.style.opacity = '1';
+                    }
+                }
+            });
+        }
+        
+        function updateTrajectory() {
+            trajectoryPoints.forEach(point => scene.remove(point));
+            trajectoryPoints = [];
+            
+            const cannon = getCurrentCannon();
+            if (!cannon || activeProjectile) return;
+            
+            const firePosition = cannon.getFirePosition();
+            const fireDirection = cannon.getFireDirection();
+            
+            const power = chargePower / 100 * MAX_POWER;
+            const velocity = fireDirection.clone().multiplyScalar(power);
+            
+            let pos = firePosition.clone();
+            let vel = velocity.clone();
+            
+            for (let i = 0; i < 25; i++) {
+                vel.y += GRAVITY * 0.1;
+                vel.x += windStrength * windDirection * 0.1 * 0.3;
+                pos.add(vel.clone().multiplyScalar(0.1));
+                
+                const geometry = new THREE.SphereGeometry(0.15, 4, 4);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 1 - i / 25
+                });
+                const point = new THREE.Mesh(geometry, material);
+                point.position.copy(pos);
+                scene.add(point);
+                trajectoryPoints.push(point);
+                
+                if (getTerrainHeight(pos.x, pos.z) > pos.y) break;
+            }
+        }
+        
+        function endGame() {
+            gameOver = true;
+            const aliveCastles = castles.filter(c => c.alive);
+            const winner = aliveCastles.length > 0 ? 
+                (aliveCastles[0].player === 0 ? 'Red' : 'Blue') : 'Nobody';
+            
+            document.getElementById('winnerText').textContent = `${winner} Castle Wins!`;
+            document.getElementById('victoryScreen').style.display = 'block';
+        }
+        
+        function restartGame() {
+            // Clean up
+            castles.forEach(castle => {
+                scene.remove(castle.meshGroup);
+                if (castle.healthBarContainer) {
+                    scene.remove(castle.healthBarContainer);
+                }
+            });
+            cannons.forEach(cannon => scene.remove(cannon.meshGroup));
+            projectiles.forEach(proj => scene.remove(proj.mesh));
+            particles.forEach(part => scene.remove(part));
+            trajectoryPoints.forEach(point => scene.remove(point));
+            
+            castles = [];
+            cannons = [];
+            projectiles = [];
+            particles = [];
+            trajectoryPoints = [];
+            
+            // Reset state
+            currentPlayer = 0;
+            currentWeapon = 0;
+            turnTimer = TURN_TIME;
+            gameOver = false;
+            activeProjectile = null;
+            cameraTarget = null;
+            cannonAngle = 45;
+            cannonDirection = 0;
+            
+            WEAPONS.forEach((weapon, index) => {
+                weaponAmmo[index] = weapon.ammo;
+            });
+            
+            // Reset UI controls
+            document.getElementById('angleSlider').value = 45;
+            document.getElementById('angleValue').textContent = '45°';
+            document.getElementById('directionSlider').value = 0;
+            document.getElementById('directionValue').textContent = '0°';
+            
+            generateTerrain();
+            setTimeout(() => {
+                createCastles();
+                createCannons();
+                setupControls();
+            }, 100);
+            
+            randomizeWind();
+            updateUI();
+            updateWeaponUI();
+            
+            document.getElementById('victoryScreen').style.display = 'none';
+        }
+        
+        function setupEventListeners() {
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                       (window.innerWidth <= 768);
+            
+            // Keyboard controls
+            window.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                // Weapon selection
+                if (e.key >= '1' && e.key <= '5') {
+                    currentWeapon = parseInt(e.key) - 1;
+                    document.querySelectorAll('.weapon-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.weapon-btn')[currentWeapon].classList.add('active');
+                    updateUI();
+                }
+                
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    if (!isCharging && !gameOver) {
+                        isCharging = true;
+                        document.getElementById('powerMeter').style.display = 'block';
+                    }
+                }
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+                
+                if (e.key === ' ' && isCharging) {
+                    isCharging = false;
+                    document.getElementById('powerMeter').style.display = 'none';
+                    fireWeapon();
+                    chargePower = 0;
+                }
+            });
+            
+            // Camera controls
+            if (!isMobile) {
+                window.addEventListener('wheel', (e) => {
+                    camera.fov += e.deltaY * 0.05;
+                    camera.fov = Math.max(30, Math.min(90, camera.fov));
+                    camera.updateProjectionMatrix();
+                });
+            }
+            
+            // Weapon buttons
+            document.querySelectorAll('.weapon-btn').forEach((btn, index) => {
+                const selectWeapon = () => {
+                    if (weaponAmmo[index] === 0 && WEAPONS[index].ammo !== -1) return;
+                    
+                    currentWeapon = index;
+                    document.querySelectorAll('.weapon-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updateUI();
+                };
+                
+                btn.addEventListener('click', selectWeapon);
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    selectWeapon();
+                });
+            });
+            
+            // Restart button
+            document.getElementById('restartBtn').addEventListener('click', restartGame);
+            
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        let lastTime = 0;
+        
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime || 0;
+            
+            if (!deltaTime || deltaTime <= 0) return;
+            
+            if (!gameOver) {
+                turnTimer -= deltaTime;
+                if (turnTimer <= 0) {
+                    nextTurn();
+                }
+                
+                // Update castles
+                castles.forEach(castle => castle.updatePosition());
+                
+                if (isCharging) {
+                    chargePower = Math.min(100, chargePower + 80 * deltaTime);
+                    document.getElementById('powerBar').style.width = chargePower + '%';
+                    updateTrajectory();
+                }
+                
+                // Camera tracking
+                if (activeProjectile && !activeProjectile.exploded) {
+                    focusCamera(activeProjectile.position, true);
+                } else if (cameraTarget) {
+                    focusCamera(cameraTarget, true);
+                }
+                
+                // Update projectiles
+                projectiles = projectiles.filter(proj => {
+                    const stillActive = proj.update(deltaTime);
+                    
+                    if (proj === activeProjectile && !stillActive) {
+                        if (proj.exploded) {
+                            cameraTarget = proj.position.clone();
+                            setTimeout(() => {
+                                cameraTarget = null;
+                            }, 2000);
+                        }
+                        activeProjectile = null;
+                    }
+                    
+                    return stillActive;
+                });
+                
+                updateParticles(deltaTime);
+                updateUI();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>
