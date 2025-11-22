@@ -125,8 +125,34 @@ class BallerGame extends Engine {
             });
         }
 
+        // Weapon selector buttons
+        document.querySelectorAll('.weapon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const weaponIdx = parseInt(btn.dataset.weapon, 10);
+                this._selectWeapon(weaponIdx);
+            });
+        });
+
         // Window resize
         window.addEventListener('resize', () => this._onResize());
+    }
+
+    /**
+     * Select weapon by index
+     */
+    _selectWeapon(idx) {
+        if (idx < 0 || idx >= this.config.WEAPONS.length) return;
+        if (this.state.ammo[idx] === 0) return; // Out of ammo
+
+        this.state.currentWeapon = idx;
+
+        // Update button styles
+        document.querySelectorAll('.weapon-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', i === idx);
+            btn.classList.toggle('disabled', this.state.ammo[i] === 0);
+        });
+
+        Debug.debug('Weapon selected', { weapon: this.config.WEAPONS[idx].name });
     }
 
     /**
@@ -171,6 +197,9 @@ class BallerGame extends Engine {
                 break;
             case ' ':
                 this._startCharge();
+                break;
+            case '1': case '2': case '3': case '4': case '5':
+                this._selectWeapon(parseInt(e.key, 10) - 1);
                 break;
         }
         this._updateUI();
@@ -281,6 +310,11 @@ class BallerGame extends Engine {
         // Update particles
         this.particles.update(deltaTime);
 
+        // Update castle health bars (make them face camera)
+        this.castles.forEach(castle => {
+            castle.updateHealthBar(this.camera);
+        });
+
         // Update UI
         this._updateUI();
     }
@@ -312,7 +346,7 @@ class BallerGame extends Engine {
                 if (dist < weapon.radius + 5) {
                     const dmgFactor = 1 - (dist / (weapon.radius + 5));
                     const damage = weapon.damage * dmgFactor;
-                    castle.takeDamage(damage);
+                    castle.takeDamage(damage, pos);
 
                     // Show damage number
                     this.particles.createFloatingText(castle.position.clone(), damage, {
