@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine Test</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: monospace; background: rgba(0,0,0,0.7); padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info">Engine Test - Click to create explosion</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <!-- Engine load order -->
+    <script src="core/Utils.js"></script>
+    <script src="core/Debug.js"></script>
+    <script src="core/ConfigBase.js"></script>
+    <script src="entities/Entity.js"></script>
+    <script src="physics/ParticleSystem.js"></script>
+    <script src="core/Engine.js"></script>
+
+    <script>
+        // Test game extending Engine
+        class TestGame extends Engine {
+            constructor() {
+                super(EngineConfig);
+            }
+
+            init() {
+                super.init();
+
+                // Create particle system
+                this.particles = new ParticleSystem(this.scene, this.config);
+
+                // Add ground plane
+                const ground = new THREE.Mesh(
+                    new THREE.PlaneGeometry(100, 100),
+                    new THREE.MeshPhongMaterial({ color: 0x228822 })
+                );
+                ground.rotation.x = -Math.PI / 2;
+                ground.receiveShadow = true;
+                this.scene.add(ground);
+
+                // Add test cube
+                this.cube = new THREE.Mesh(
+                    new THREE.BoxGeometry(5, 5, 5),
+                    new THREE.MeshPhongMaterial({ color: 0xff6600 })
+                );
+                this.cube.position.y = 2.5;
+                this.cube.castShadow = true;
+                this.scene.add(this.cube);
+
+                // Click handler
+                window.addEventListener('click', (e) => this.onClick(e));
+
+                Debug.info('TestGame initialized');
+                return this;
+            }
+
+            onClick(e) {
+                // Create explosion at random position
+                const pos = new THREE.Vector3(
+                    Utils.random(-20, 20),
+                    Utils.random(2, 10),
+                    Utils.random(-20, 20)
+                );
+
+                this.particles.createExplosion(pos, {
+                    count: 40,
+                    radius: 8,
+                    colors: [0xff6600, 0xffaa00, 0xff0000]
+                });
+
+                // Also show floating text
+                this.particles.createFloatingText(pos, Math.floor(Utils.random(10, 50)), {
+                    color: 0xffff00,
+                    prefix: '-'
+                });
+
+                Debug.debug('Created explosion at', pos);
+            }
+
+            update(deltaTime) {
+                // Rotate cube
+                this.cube.rotation.y += deltaTime;
+
+                // Update particles
+                this.particles.update(deltaTime);
+
+                // Update info
+                document.getElementById('info').textContent =
+                    `Engine Test - Particles: ${this.particles.count} - Click to explode`;
+            }
+        }
+
+        // Start
+        const game = new TestGame();
+        game.init().start();
+
+        Debug.info('Test page loaded');
+    </script>
+</body>
+</html>

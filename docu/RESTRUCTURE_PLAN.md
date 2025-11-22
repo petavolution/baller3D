@@ -278,13 +278,35 @@ All files should remain under 300 lines for maintainability:
 5. Build Worms3D using same engine
 6. Archive monolithic files in `reference/`
 
+## Progress Tracking
+
+### Phase 1: Engine Extraction - IN PROGRESS
+
+**Completed:**
+- [x] Created `engine/` directory structure
+- [x] `engine/core/Utils.js` - Three.js disposal, math helpers
+- [x] `engine/core/Debug.js` - Logging and error tracking
+- [x] `engine/core/ConfigBase.js` - Base config with `createGameConfig()`
+- [x] `engine/core/Engine.js` - Scene/camera/renderer setup, game loop
+- [x] `engine/entities/Entity.js` - Base Entity and DamageableEntity classes
+- [x] `engine/physics/ParticleSystem.js` - Explosions, debris, floating text
+- [x] `engine/README.md` - Load order documentation
+- [x] `engine/test-engine.html` - Standalone engine test
+
+**Remaining Phase 1:**
+- [ ] Extract terrain system to engine
+- [ ] Create base Projectile class
+
+### Phase 2-7: Not started
+
 ## Next Steps
 
-1. Create directory structure
-2. Start with `engine/core/` extraction
-3. Create Entity base class
-4. Extract terrain system
-5. Proceed through phases
+1. ~~Create directory structure~~ ✓
+2. ~~Start with `engine/core/` extraction~~ ✓
+3. ~~Create Entity base class~~ ✓
+4. Extract terrain system (configurable generation)
+5. Create generic Projectile class
+6. Continue through phases
 
 ---
 
