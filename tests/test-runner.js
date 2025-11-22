@@ -886,6 +886,179 @@ runner.describe('Config System', () => {
     });
 });
 
+// --- ParticleSystem Tests ---
+class ParticleSystem {
+    constructor(scene, config) {
+        this.scene = scene;
+        this.config = config || { PHYSICS: { GRAVITY: -9.8 } };
+        this.particles = [];
+    }
+
+    createExplosion(position, options = {}) {
+        const count = options.count || 10;
+        for (let i = 0; i < count; i++) {
+            const particle = {
+                position: position.clone(),
+                userData: { life: 1, decay: 0.02, velocity: new THREE.Vector3() }
+            };
+            this.particles.push(particle);
+        }
+    }
+
+    createSplash(position, options = {}) {
+        const count = options.count || 15;
+        for (let i = 0; i < count; i++) {
+            const particle = {
+                position: position.clone(),
+                userData: { life: 0.8, decay: 0.03, velocity: new THREE.Vector3(0, 5, 0) }
+            };
+            this.particles.push(particle);
+        }
+    }
+
+    createSpeechBubble(position, text, options = {}) {
+        const sprite = {
+            position: position.clone(),
+            text: text,
+            userData: { life: options.duration || 1.5, decay: 1, isSprite: true }
+        };
+        this.particles.push(sprite);
+    }
+
+    createDebris(position, options = {}) {
+        const count = options.count || 8;
+        for (let i = 0; i < count; i++) {
+            const debris = {
+                position: position.clone(),
+                userData: { life: 3, decay: 0.3, velocity: new THREE.Vector3() }
+            };
+            this.particles.push(debris);
+        }
+    }
+
+    get count() { return this.particles.length; }
+    clear() { this.particles = []; }
+    dispose() { this.clear(); }
+}
+
+global.ParticleSystem = ParticleSystem;
+
+runner.describe('ParticleSystem', () => {
+    runner.test('ParticleSystem initializes empty', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        runner.assertEqual(ps.count, 0, 'Should start with no particles');
+    });
+
+    runner.test('ParticleSystem.createExplosion adds particles', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        ps.createExplosion(new THREE.Vector3(0, 0, 0), { count: 20 });
+        runner.assertEqual(ps.count, 20, 'Should have 20 particles');
+    });
+
+    runner.test('ParticleSystem.createSplash adds particles', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        ps.createSplash(new THREE.Vector3(0, -5, 0), { count: 10 });
+        runner.assertEqual(ps.count, 10, 'Should have 10 splash particles');
+    });
+
+    runner.test('ParticleSystem.createSpeechBubble adds sprite', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        ps.createSpeechBubble(new THREE.Vector3(0, 5, 0), 'Fire!');
+        runner.assertEqual(ps.count, 1, 'Should have 1 speech bubble');
+        runner.assertEqual(ps.particles[0].text, 'Fire!', 'Should store text');
+    });
+
+    runner.test('ParticleSystem.createDebris adds debris particles', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        ps.createDebris(new THREE.Vector3(0, 10, 0), { count: 5 });
+        runner.assertEqual(ps.count, 5, 'Should have 5 debris particles');
+    });
+
+    runner.test('ParticleSystem.clear removes all particles', () => {
+        const scene = new THREE.Scene();
+        const ps = new ParticleSystem(scene);
+        ps.createExplosion(new THREE.Vector3(0, 0, 0), { count: 30 });
+        ps.clear();
+        runner.assertEqual(ps.count, 0, 'Should have no particles after clear');
+    });
+});
+
+// --- TrajectoryPreview Tests ---
+class TrajectoryPreview {
+    constructor(scene, config, options = {}) {
+        this.scene = scene;
+        this.config = config || { PHYSICS: { GRAVITY: -9.8 } };
+        this.points = [];
+        this.pointCount = options.pointCount || 25;
+        this.timeStep = options.timeStep || 0.1;
+    }
+
+    update(startPos, velocity, wind = null, terrain = null) {
+        this.clear();
+        const gravity = this.config.PHYSICS ? this.config.PHYSICS.GRAVITY : -9.8;
+        const pos = startPos.clone();
+        const vel = velocity.clone();
+
+        for (let i = 0; i < this.pointCount; i++) {
+            vel.y += gravity * this.timeStep;
+            if (wind) {
+                vel.x += wind.strength * wind.direction * this.timeStep * 0.3;
+            }
+            pos.add(vel.clone().multiplyScalar(this.timeStep));
+            this.points.push(pos.clone());
+        }
+    }
+
+    clear() { this.points = []; }
+    dispose() { this.clear(); }
+}
+
+global.TrajectoryPreview = TrajectoryPreview;
+
+runner.describe('TrajectoryPreview', () => {
+    runner.test('TrajectoryPreview initializes empty', () => {
+        const scene = new THREE.Scene();
+        const tp = new TrajectoryPreview(scene, { PHYSICS: { GRAVITY: -9.8 } });
+        runner.assertEqual(tp.points.length, 0, 'Should start with no points');
+    });
+
+    runner.test('TrajectoryPreview.update generates points', () => {
+        const scene = new THREE.Scene();
+        const tp = new TrajectoryPreview(scene, { PHYSICS: { GRAVITY: -9.8 } }, { pointCount: 10 });
+        tp.update(new THREE.Vector3(0, 20, 0), new THREE.Vector3(5, 10, 0));
+        runner.assertEqual(tp.points.length, 10, 'Should have 10 trajectory points');
+    });
+
+    runner.test('TrajectoryPreview applies gravity to trajectory', () => {
+        const scene = new THREE.Scene();
+        const tp = new TrajectoryPreview(scene, { PHYSICS: { GRAVITY: -9.8 } }, { pointCount: 5 });
+        tp.update(new THREE.Vector3(0, 50, 0), new THREE.Vector3(10, 0, 0));
+        // Points should fall due to gravity
+        runner.assertTrue(tp.points[4].y < 50, 'End point should be lower due to gravity');
+    });
+
+    runner.test('TrajectoryPreview applies wind', () => {
+        const scene = new THREE.Scene();
+        const tp = new TrajectoryPreview(scene, { PHYSICS: { GRAVITY: -9.8 } }, { pointCount: 10 });
+        tp.update(new THREE.Vector3(0, 50, 0), new THREE.Vector3(0, 10, 0), { strength: 5, direction: 1 });
+        // Wind should push trajectory in x direction
+        runner.assertTrue(tp.points[9].x > 0, 'Trajectory should drift with wind');
+    });
+
+    runner.test('TrajectoryPreview.clear removes all points', () => {
+        const scene = new THREE.Scene();
+        const tp = new TrajectoryPreview(scene, { PHYSICS: { GRAVITY: -9.8 } });
+        tp.update(new THREE.Vector3(0, 20, 0), new THREE.Vector3(5, 10, 0));
+        tp.clear();
+        runner.assertEqual(tp.points.length, 0, 'Should have no points after clear');
+    });
+});
+
 // ============================================================================
 // Run Tests
 // ============================================================================

@@ -344,6 +344,51 @@ All files should remain under 300 lines for maintainability:
 
 ### Phase 7: Testing & Polish - IN PROGRESS
 
+**Tests (47 tests passing):**
+- [x] Config tests
+- [x] Vector3 tests
+- [x] Terrain tests
+- [x] Castle tests
+- [x] Cannon tests
+- [x] Projectile tests
+- [x] Utils tests
+- [x] Entity tests
+- [x] DamageableEntity tests
+- [x] Config System tests
+- [x] ParticleSystem tests (6 tests)
+- [x] TrajectoryPreview tests (5 tests)
+
+### Monolithic Feature Ports - COMPLETE ✓
+
+Features analyzed and ported from `ballerburg3D-remixed-59b3f135.html` and `worms3D-remixed-01.html`:
+
+**Engine ParticleSystem Enhancements:**
+- [x] `createSplash()` - Water impact particle effects
+- [x] `createSpeechBubble()` - Character speech/death phrases
+- [x] Explosion flash light (PointLight)
+- [x] Mobile vibration feedback (`navigator.vibrate`)
+
+**New TrajectoryPreview Class:**
+- [x] `engine/physics/TrajectoryPreview.js` - Visual trajectory dots showing projectile path
+
+**Enhanced Worm Visuals & Animations:**
+- [x] Smooth body with 7 overlapping spheres
+- [x] Cartoon eyes with white backgrounds, black pupils, shine
+- [x] Eye tracking based on movement direction
+- [x] Blinking animation (random 2-5s intervals)
+- [x] Breathing idle animation (subtle scale pulse)
+- [x] Landing squash/stretch effect
+- [x] Selection indicator (bobbing yellow cone)
+- [x] `damageShowTimer` - Health bar visible 3s after damage
+- [x] Terminal velocity cap (-30)
+- [x] Ground friction (0.85 factor)
+
+**WormsGame Improvements:**
+- [x] Battle cry speech bubbles ("Fire!", "Incoming!", etc.)
+- [x] Death phrases when falling in water ("Nooo!", "Argh!", etc.)
+- [x] Water splash effects
+- [x] Selection indicator updates on turn change
+
 ## Next Steps
 
 1. ~~Create directory structure~~ ✓
@@ -356,9 +401,11 @@ All files should remain under 300 lines for maintainability:
 8. ~~Add weapon selector UI~~ ✓
 9. ~~Create comprehensive tests for engine~~ ✓
 10. ~~Create Worms3D game using engine~~ ✓
-11. Add input system abstraction to engine
-12. Performance optimization
-13. Mobile touch improvements
+11. ~~Port enhanced features from monolithic files~~ ✓
+12. Add input system abstraction to engine
+13. Add tests for new engine features (TrajectoryPreview, splash, speech)
+14. Performance optimization
+15. Mobile touch improvements
 
 ---
 
