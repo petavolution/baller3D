@@ -4,95 +4,67 @@
 
 Both games share significant code (~70% overlap). This plan creates a shared engine with game-specific modules.
 
-## Proposed Directory Structure
+## Current Directory Structure (Simplified)
 
 ```
 /
+├── index.html                   # Game launcher (links to both games)
+│
 ├── engine/                      # Shared game engine
 │   ├── core/
-│   │   ├── Engine.js           # Main engine class, scene setup
-│   │   ├── Config.js           # Base config system
-│   │   ├── Debug.js            # Logging system
-│   │   ├── Utils.js            # Math, dispose helpers
-│   │   └── AssetLoader.js      # Resource loading
-│   │
-│   ├── physics/
-│   │   ├── Projectile.js       # Generic projectile physics
-│   │   ├── Gravity.js          # Gravity constants/helpers
-│   │   ├── Wind.js             # Wind system
-│   │   └── Collision.js        # Collision detection
-│   │
-│   ├── world/
-│   │   ├── Terrain.js          # Destructible terrain
-│   │   ├── Water.js            # Water plane
-│   │   └── Sky.js              # Skybox/atmosphere
+│   │   ├── Engine.js           # Main engine class, scene/camera/renderer, game loop
+│   │   ├── ConfigBase.js       # Base config with createGameConfig()
+│   │   ├── Debug.js            # Logging and error tracking
+│   │   └── Utils.js            # Math helpers, Three.js disposal
 │   │
 │   ├── entities/
-│   │   ├── Entity.js           # Base entity class
-│   │   ├── Character.js        # Base for movable characters
-│   │   └── Structure.js        # Base for static structures
+│   │   └── Entity.js           # Entity and DamageableEntity base classes
 │   │
-│   ├── systems/
-│   │   ├── Camera.js           # Camera tracking, smooth movement
-│   │   ├── Particles.js        # Explosions, effects
-│   │   ├── DamageNumbers.js    # Floating damage text
-│   │   ├── TurnManager.js      # Turn-based game flow
-│   │   └── HealthBar.js        # Billboard health bars
+│   ├── physics/
+│   │   ├── ParticleSystem.js   # Explosions, debris, splash, speech bubbles
+│   │   ├── Projectile.js       # BaseProjectile and BouncingProjectile
+│   │   └── TrajectoryPreview.js# Visual trajectory preview
 │   │
-│   ├── input/
-│   │   ├── Input.js            # Unified input handler
-│   │   ├── Keyboard.js         # Keyboard events
-│   │   ├── Mouse.js            # Mouse events
-│   │   └── Touch.js            # Touch/mobile events
+│   ├── world/
+│   │   └── Terrain.js          # BaseTerrain with destructible heightmap
 │   │
-│   ├── ui/
-│   │   ├── UIManager.js        # DOM UI management
-│   │   ├── PowerMeter.js       # Charge meter
-│   │   ├── WeaponSelector.js   # Weapon buttons
-│   │   └── Modal.js            # Victory/menu screens
-│   │
-│   └── index.js                # Engine exports
+│   ├── README.md               # Engine documentation
+│   └── test-engine.html        # Standalone engine test
 │
 ├── games/
-│   ├── ballerburg3D/
-│   │   ├── index.html          # Entry point
-│   │   ├── css/
-│   │   │   └── style.css       # Game-specific styles
-│   │   ├── js/
-│   │   │   ├── BallerConfig.js # Game constants
-│   │   │   ├── BallerGame.js   # Main game controller
-│   │   │   ├── Castle.js       # Castle entity
-│   │   │   ├── Cannon.js       # Cannon entity
-│   │   │   └── BallerUI.js     # Game-specific UI
-│   │   └── assets/             # Game-specific assets
+│   ├── ballerburg3D/           # Castle artillery game
+│   │   ├── index.html
+│   │   ├── css/style.css
+│   │   └── js/
+│   │       ├── BallerConfig.js
+│   │       ├── BallerGame.js   # Extends Engine
+│   │       ├── BallerTerrain.js# Extends BaseTerrain
+│   │       ├── Castle.js       # Extends DamageableEntity
+│   │       └── Cannon.js       # Extends Entity
 │   │
-│   └── worms3D/
-│       ├── index.html          # Entry point
-│       ├── css/
-│       │   └── style.css       # Game-specific styles
-│       ├── js/
-│       │   ├── WormsConfig.js  # Game constants
-│       │   ├── WormsGame.js    # Main game controller
-│       │   ├── Worm.js         # Worm character entity
-│       │   ├── WormPhysics.js  # Character movement physics
-│       │   └── WormsUI.js      # Game-specific UI
-│       └── assets/             # Game-specific assets
+│   └── worms3D/                # Team-based worm warfare
+│       ├── index.html
+│       ├── css/style.css
+│       └── js/
+│           ├── WormsConfig.js
+│           ├── WormsGame.js    # Extends Engine
+│           ├── WormsTerrain.js # Extends BaseTerrain
+│           └── Worm.js         # Extends DamageableEntity
 │
-├── shared/
-│   └── css/
-│       └── base.css            # Shared base styles
+├── css/                        # Shared styles
+│   └── style.css
 │
 ├── tests/
-│   ├── engine/                 # Engine tests
-│   └── games/                  # Game-specific tests
+│   └── test-runner.js          # 47 tests
 │
-├── docs/                       # Documentation
+├── docu/                       # Documentation
 │   ├── project-vision.md
 │   └── RESTRUCTURE_PLAN.md
 │
-└── reference/                  # Original source files
+└── reference/                  # Archived original code
     ├── baller_sources/         # Atari ST C sources
-    └── monolithic/             # Original single-file versions
+    ├── monolithic/             # Original single-file HTML versions
+    └── old-modular/            # Old /js/ and app.js implementation
 ```
 
 ## Shared Engine Components Analysis

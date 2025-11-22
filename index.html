@@ -2,143 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Ballerburg 3D</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baller3D Game Engine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+        .games {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .game-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 280px;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.15);
+        }
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .game-desc {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .ballerburg .game-icon { color: #e74c3c; }
+        .worms .game-icon { color: #2ecc71; }
+        footer {
+            position: absolute;
+            bottom: 1rem;
+            color: #555;
+            font-size: 0.8rem;
+        }
+        footer a { color: #888; }
+    </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
+    <h1>Baller3D</h1>
+    <p class="subtitle">Three.js Game Engine</p>
 
-        <!-- Game UI Overlay -->
-        <div id="ui">
-            <!-- Top Left: Game Info -->
-            <div id="gameInfo">
-                <div id="timer">45</div>
-                <div id="currentPlayer">Red Castle's Turn</div>
+    <div class="games">
+        <a href="games/ballerburg3D/index.html" class="game-card ballerburg">
+            <div class="game-icon">&#127984;</div>
+            <div class="game-title">Ballerburg 3D</div>
+            <div class="game-desc">
+                Classic artillery castle siege. Aim your cannon,
+                account for wind, and destroy the enemy castle!
             </div>
+        </a>
 
-            <!-- Top Right: Wind Indicator -->
-            <div id="windIndicator">
-                <span>Wind:</span>
-                <span id="windArrow">→</span>
-                <span id="windStrength">0.0</span>
+        <a href="games/worms3D/index.html" class="game-card worms">
+            <div class="game-icon">&#128027;</div>
+            <div class="game-title">Worms 3D</div>
+            <div class="game-desc">
+                Turn-based tactical warfare. Move your worms,
+                aim weapons, and eliminate the opposing team!
             </div>
-
-            <!-- Left Panel: Cannon Controls -->
-            <div id="cannonControls">
-                <h3>Aim</h3>
-                <div class="control-row">
-                    <label>Angle:</label>
-                    <input type="range" id="angleSlider" min="10" max="80" value="45">
-                    <span id="angleValue">45°</span>
-                </div>
-                <div class="control-row">
-                    <label>Direction:</label>
-                    <input type="range" id="directionSlider" min="-45" max="45" value="0">
-                    <span id="directionValue">0°</span>
-                </div>
-            </div>
-
-            <!-- Bottom: Weapon Selector -->
-            <div id="weaponSelector">
-                <button class="weapon-btn active" data-weapon="0">
-                    <span class="weapon-icon">&#9679;</span>
-                    <span class="weapon-name">Cannon</span>
-                    <span class="ammo">∞</span>
-                </button>
-                <button class="weapon-btn" data-weapon="1">
-                    <span class="weapon-icon">&#9673;</span>
-                    <span class="weapon-name">Explosive</span>
-                    <span class="ammo">8</span>
-                </button>
-                <button class="weapon-btn" data-weapon="2">
-                    <span class="weapon-icon">&#9675;&#9675;</span>
-                    <span class="weapon-name">Chain</span>
-                    <span class="ammo">6</span>
-                </button>
-                <button class="weapon-btn" data-weapon="3">
-                    <span class="weapon-icon">&#9788;</span>
-                    <span class="weapon-name">Fire</span>
-                    <span class="ammo">10</span>
-                </button>
-                <button class="weapon-btn" data-weapon="4">
-                    <span class="weapon-icon">&#9632;</span>
-                    <span class="weapon-name">Stone</span>
-                    <span class="ammo">∞</span>
-                </button>
-            </div>
-
-            <!-- Power Meter -->
-            <div id="powerMeter">
-                <div id="powerFill"></div>
-            </div>
-
-            <!-- Fire Button (Mobile) -->
-            <button id="fireBtn">🎯 FIRE</button>
-
-            <!-- Help Text -->
-            <div id="helpText">
-                <strong>BALLERBURG 3D</strong><br>
-                SPACE: Charge &amp; Fire | Sliders: Aim | 1-5: Weapons
-            </div>
-        </div>
-
-        <!-- Victory Modal -->
-        <div id="victoryModal" class="hidden">
-            <h1 id="victoryTitle">Victory!</h1>
-            <p id="victoryMessage">Castle Destroyed!</p>
-            <button id="restartBtn">New Battle</button>
-        </div>
+        </a>
     </div>
 
-    <!-- Three.js from CDN (must load first) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-    <!--
-        Game Modules - Load Order (CRITICAL):
-        1. Debug.js  - Logging system (no dependencies)
-        2. Config.js - Game constants (no dependencies)
-        3. Utils.js  - Utility functions (no dependencies)
-        4. Entities  - Terrain → Castle → Cannon → Projectile (depend on Config, THREE, Utils)
-        5. Systems   - Physics, UI (depend on Config, THREE, Utils)
-        6. Game.js   - Main controller (depends on all above)
-    -->
-    <script src="js/core/Debug.js"></script>
-    <script src="js/core/Config.js"></script>
-    <script src="js/core/Utils.js"></script>
-    <script src="js/entities/Terrain.js"></script>
-    <script src="js/entities/Castle.js"></script>
-    <script src="js/entities/Cannon.js"></script>
-    <script src="js/entities/Projectile.js"></script>
-    <script src="js/systems/Physics.js"></script>
-    <script src="js/systems/UI.js"></script>
-    <script src="js/core/Game.js"></script>
-
-    <!-- Initialize -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Debug.info('DOM loaded, initializing game...');
-            try {
-                window.game = new Game();
-                Debug.info('Game instance created successfully');
-
-                // Make debug available globally for console access
-                window.Debug = Debug;
-
-                // Auto-save log on errors
-                window.onerror = function(msg, url, line, col, error) {
-                    Debug.error('Uncaught error', { message: msg, url, line, col, stack: error?.stack });
-                    return false;
-                };
-
-            } catch (e) {
-                Debug.error('Failed to initialize game', { error: e.message, stack: e.stack });
-                console.error('Game initialization failed:', e);
-            }
-        });
-    </script>
+    <footer>
+        Powered by <a href="https://threejs.org">Three.js</a> |
+        <a href="engine/test-engine.html">Engine Test</a>
+    </footer>
 </body>
 </html>
