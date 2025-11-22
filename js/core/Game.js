@@ -39,6 +39,11 @@ class Game {
         this.trajectoryPoints = [];
         this._pendingTurnTimeout = null;
 
+        // Camera tracking
+        this._cameraMode = 'default'; // 'default', 'tracking', 'returning'
+        this._cameraTarget = new THREE.Vector3();
+        this._cameraLookAt = new THREE.Vector3();
+
         try {
             this._init();
             Debug.info('Game: Initialization complete');
@@ -324,6 +329,9 @@ class Game {
         Debug.debug('Fire projectile', { power, weapon: weapon.name, position: pos, velocity: vel });
         this.projectile = new Projectile(this.scene, pos, vel, weapon);
 
+        // Start camera tracking
+        this._cameraMode = 'tracking';
+
         // Consume ammo
         if (weapon.ammo !== -1) {
             this.state.ammo[this.state.currentWeapon]--;
@@ -359,7 +367,13 @@ class Game {
             const dist = castle.position.distanceTo(position);
             if (dist < weapon.radius + 8) {
                 const damage = Math.floor(weapon.damage * (1 - dist / (weapon.radius + 8)));
-                castle.takeDamage(damage, position);
+                if (damage > 0) {
+                    castle.takeDamage(damage, position);
+                    // Show floating damage number
+                    const dmgPos = castle.position.clone();
+                    dmgPos.y += 15;
+                    this.physics.createDamageNumber(dmgPos, damage);
+                }
             }
         });
 
@@ -507,6 +521,9 @@ class Game {
                 if (!active && !this.projectile.exploded) {
                     this.projectile.explode();
 
+                    // Start returning camera
+                    this._cameraMode = 'returning';
+
                     // Only create explosion effects for in-bounds impacts
                     if (!this.projectile.outOfBounds) {
                         this._handleImpact(this.projectile.position, this.projectile.weapon);
@@ -525,8 +542,49 @@ class Game {
 
             // Update physics
             this.physics.update(deltaTime);
+
+            // Update camera tracking
+            this._updateCamera(deltaTime);
         }
 
         this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * Update camera position based on tracking mode
+     */
+    _updateCamera(deltaTime) {
+        const cam = Config.CAMERA;
+        const lerpSpeed = 3 * deltaTime;
+
+        if (this._cameraMode === 'tracking' && this.projectile) {
+            // Follow projectile with offset
+            this._cameraTarget.set(
+                this.projectile.position.x * 0.5,
+                Math.max(this.projectile.position.y + 15, 30),
+                this.projectile.position.z + 40
+            );
+            this._cameraLookAt.copy(this.projectile.position);
+        } else if (this._cameraMode === 'returning' || this._cameraMode === 'default') {
+            // Return to default position
+            this._cameraTarget.set(cam.defaultPosition.x, cam.defaultPosition.y, cam.defaultPosition.z);
+            this._cameraLookAt.set(cam.lookAt.x, cam.lookAt.y, cam.lookAt.z);
+            if (this._cameraMode === 'returning') {
+                // Check if close enough to default
+                if (this.camera.position.distanceTo(this._cameraTarget) < 1) {
+                    this._cameraMode = 'default';
+                }
+            }
+        }
+
+        // Smooth interpolation
+        this.camera.position.lerp(this._cameraTarget, lerpSpeed);
+
+        // Smooth look-at
+        const currentLookAt = new THREE.Vector3();
+        this.camera.getWorldDirection(currentLookAt);
+        currentLookAt.multiplyScalar(50).add(this.camera.position);
+        currentLookAt.lerp(this._cameraLookAt, lerpSpeed);
+        this.camera.lookAt(currentLookAt);
     }
 }

@@ -112,6 +112,45 @@ class Physics {
     }
 
     /**
+     * Create floating damage number
+     */
+    createDamageNumber(position, damage, color = 0xff0000) {
+        // Create canvas for text
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        // Draw text
+        ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('-' + Math.floor(damage), 64, 32);
+
+        // Create sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(4, 2, 1);
+        sprite.position.copy(position);
+        sprite.position.y += 2;
+
+        sprite.userData = {
+            velocity: new THREE.Vector3(0, 8, 0),
+            life: 1.5,
+            decay: 1
+        };
+
+        this.scene.add(sprite);
+        this.particles.push(sprite);
+    }
+
+    /**
      * Clear all particles
      */
     clear() {
