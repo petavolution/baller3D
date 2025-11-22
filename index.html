@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Ballerburg 3D</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Game UI Overlay -->
+        <div id="ui">
+            <!-- Top Left: Game Info -->
+            <div id="gameInfo">
+                <div id="timer">45</div>
+                <div id="currentPlayer">Red Castle's Turn</div>
+            </div>
+
+            <!-- Top Right: Wind Indicator -->
+            <div id="windIndicator">
+                <span>Wind:</span>
+                <span id="windArrow">→</span>
+                <span id="windStrength">0.0</span>
+            </div>
+
+            <!-- Left Panel: Cannon Controls -->
+            <div id="cannonControls">
+                <h3>Aim</h3>
+                <div class="control-row">
+                    <label>Angle:</label>
+                    <input type="range" id="angleSlider" min="10" max="80" value="45">
+                    <span id="angleValue">45°</span>
+                </div>
+                <div class="control-row">
+                    <label>Direction:</label>
+                    <input type="range" id="directionSlider" min="-45" max="45" value="0">
+                    <span id="directionValue">0°</span>
+                </div>
+            </div>
+
+            <!-- Bottom: Weapon Selector -->
+            <div id="weaponSelector">
+                <button class="weapon-btn active" data-weapon="0">
+                    <span class="weapon-icon">&#9679;</span>
+                    <span class="weapon-name">Cannon</span>
+                    <span class="ammo">∞</span>
+                </button>
+                <button class="weapon-btn" data-weapon="1">
+                    <span class="weapon-icon">&#9673;</span>
+                    <span class="weapon-name">Explosive</span>
+                    <span class="ammo">8</span>
+                </button>
+                <button class="weapon-btn" data-weapon="2">
+                    <span class="weapon-icon">&#9675;&#9675;</span>
+                    <span class="weapon-name">Chain</span>
+                    <span class="ammo">6</span>
+                </button>
+                <button class="weapon-btn" data-weapon="3">
+                    <span class="weapon-icon">&#9788;</span>
+                    <span class="weapon-name">Fire</span>
+                    <span class="ammo">10</span>
+                </button>
+                <button class="weapon-btn" data-weapon="4">
+                    <span class="weapon-icon">&#9632;</span>
+                    <span class="weapon-name">Stone</span>
+                    <span class="ammo">∞</span>
+                </button>
+            </div>
+
+            <!-- Power Meter -->
+            <div id="powerMeter">
+                <div id="powerFill"></div>
+            </div>
+
+            <!-- Help Text -->
+            <div id="helpText">
+                <strong>BALLERBURG 3D</strong><br>
+                SPACE: Charge &amp; Fire | Sliders: Aim | 1-5: Weapons
+            </div>
+        </div>
+
+        <!-- Victory Modal -->
+        <div id="victoryModal" class="hidden">
+            <h1 id="victoryTitle">Victory!</h1>
+            <p id="victoryMessage">Castle Destroyed!</p>
+            <button id="restartBtn">New Battle</button>
+        </div>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Game Modules -->
+    <script src="js/core/Config.js"></script>
+    <script src="js/entities/Terrain.js"></script>
+    <script src="js/entities/Castle.js"></script>
+    <script src="js/entities/Cannon.js"></script>
+    <script src="js/entities/Projectile.js"></script>
+    <script src="js/systems/Physics.js"></script>
+    <script src="js/systems/UI.js"></script>
+    <script src="js/core/Game.js"></script>
+
+    <!-- Initialize -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.game = new Game();
+        });
+    </script>
+</body>
+</html>

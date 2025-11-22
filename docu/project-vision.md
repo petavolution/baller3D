@@ -80,48 +80,46 @@ The game's source code was released by Eckhard Kruse to registered users, making
 
 ## Technical Architecture
 
-### Current Stack
+### Current Stack (Modular)
 
 ```
-┌─────────────────────────────────────────────┐
-│              Browser (HTML5)                │
-├─────────────────────────────────────────────┤
-│         Three.js (WebGL Rendering)          │
-├─────────────────────────────────────────────┤
-│            Game Engine (app.js)             │
-│  ┌─────────┬─────────┬──────────┬────────┐  │
-│  │BallerBurg│ Castle  │ Cannon   │Projectile│
-│  │(Main)   │(Entity) │(Entity)  │(Physics)│  │
-│  └─────────┴─────────┴──────────┴────────┘  │
-├─────────────────────────────────────────────┤
-│              DOM UI Layer                   │
-│  (Controls, Health Bars, Weapon Selection)  │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│                Browser (HTML5)                  │
+├─────────────────────────────────────────────────┤
+│    index.html ─────── css/style.css             │
+├─────────────────────────────────────────────────┤
+│            Three.js (WebGL/CDN)                 │
+├─────────────────────────────────────────────────┤
+│   js/core/           js/entities/               │
+│   ├── Config.js      ├── Terrain.js             │
+│   └── Game.js        ├── Castle.js              │
+│                      ├── Cannon.js              │
+│   js/systems/        └── Projectile.js          │
+│   ├── Physics.js                                │
+│   └── UI.js                                     │
+└─────────────────────────────────────────────────┘
 ```
 
-### Class Structure
+### Module Structure
 
 ```
-BallerBurg (728 lines) - Main game controller
-├── Scene Management (Three.js setup)
-├── Game State (players, turns, victory)
-├── Physics Engine (gravity, wind, collision)
-├── UI System (controls, displays)
-└── Event Handlers (keyboard, mouse, touch)
+js/core/
+├── Config.js (~65 lines)     - Central configuration
+└── Game.js (~350 lines)      - Main game controller
+    ├── Three.js initialization
+    ├── Game loop management
+    ├── State management
+    └── Event coordination
 
-Castle (119 lines) - Castle structure
-├── Multi-part construction (keep, towers, walls, roofs)
-├── Health/damage system
-└── Visual destruction
+js/entities/
+├── Terrain.js (~180 lines)   - Terrain generation/destruction
+├── Castle.js (~180 lines)    - Destructible castle structure
+├── Cannon.js (~110 lines)    - Aiming/firing mechanics
+└── Projectile.js (~90 lines) - Physics-based projectile
 
-Cannon (27 lines) - Cannon entity
-├── Visual representation
-└── Position tracking
-
-Projectile (35 lines) - Projectile physics
-├── Velocity/position updates
-├── Wind application
-└── Collision detection
+js/systems/
+├── Physics.js (~120 lines)   - Explosions/particles
+└── UI.js (~150 lines)        - DOM interface handling
 ```
 
 ### Key Constants
@@ -273,39 +271,41 @@ AI Implementation Approach:
 
 ---
 
-## File Structure (Proposed)
+## File Structure (Implemented)
 
 ```
 baller3D/
+├── index.html                 # Clean entry point
+├── css/
+│   └── style.css              # All styles (~250 lines)
+├── js/
+│   ├── core/
+│   │   ├── Config.js          # Game constants & settings
+│   │   └── Game.js            # Main game controller
+│   ├── entities/
+│   │   ├── Terrain.js         # Terrain generation/destruction
+│   │   ├── Castle.js          # Destructible castle
+│   │   ├── Cannon.js          # Player cannon
+│   │   └── Projectile.js      # Physics projectile
+│   └── systems/
+│       ├── Physics.js         # Explosions & particles
+│       └── UI.js              # DOM interface
 ├── docu/
 │   └── project-vision.md      # This document
-├── src/
-│   ├── core/
-│   │   ├── Game.js            # Main game controller
-│   │   ├── Physics.js         # Physics engine
-│   │   └── AI.js              # AI system
-│   ├── entities/
-│   │   ├── Castle.js          # Castle class
-│   │   ├── Cannon.js          # Cannon class
-│   │   └── Projectile.js      # Projectile class
-│   ├── systems/
-│   │   ├── Economy.js         # Economic system
-│   │   ├── Market.js          # Market/trading
-│   │   └── Population.js      # Population management
-│   ├── ui/
-│   │   ├── Controls.js        # Input handling
-│   │   ├── HUD.js             # Heads-up display
-│   │   └── Menu.js            # Menus/dialogs
-│   └── utils/
-│       └── helpers.js         # Utility functions
-├── assets/
-│   ├── castles/               # Castle configurations
-│   └── sounds/                # Audio (future)
 ├── baller_sources/            # Original Atari ST reference
-├── index.html                 # Entry point
-├── app.js                     # Current monolithic (legacy)
-└── ballerburg3D-remixed.html  # Current implementation
+│   ├── BALLER1.C, BALLER2.C   # Original source code
+│   ├── ANLEITNG.TXT           # German game manual
+│   └── ...                    # Other legacy files
+└── [legacy files]             # app.js, ballerburg3D-remixed.html
 ```
+
+### Design Principles Applied
+
+1. **Separation of Concerns**: Each file has a single responsibility
+2. **Under 1440 Lines**: All files kept small and focused
+3. **No Build Required**: Runs directly in browser via script tags
+4. **Extensible**: Easy to add Economy, AI, or Market systems
+5. **Clean Dependencies**: Clear loading order, no circular refs
 
 ---
 
@@ -337,9 +337,16 @@ baller3D/
 
 Ballerburg 3D aims to be the definitive modern version of this classic artillery game. By faithfully implementing the original's strategic depth while leveraging modern web technologies, we can introduce a new generation to this piece of gaming history while providing nostalgic players a fresh way to experience a beloved classic.
 
-The monochrome Three.js aesthetic pays homage to the original Atari ST's high-resolution mode while the browser-based approach ensures universal accessibility. Future development should prioritize the economic system and AI opponents, as these represent the original game's most significant strategic elements beyond basic artillery mechanics.
+The codebase has been restructured into a clean, modular architecture that:
+- Separates concerns into distinct, focused files
+- Keeps all individual files under 1440 lines
+- Enables easy extension for future features (AI, Economy)
+- Runs directly in browsers without build tools
+
+Future development should prioritize the economic system and AI opponents, as these represent the original game's most significant strategic elements beyond basic artillery mechanics.
 
 ---
 
 *Last Updated: 2025-11-22*
-*Based on analysis of original Atari ST source code (BALLER1.C, BALLER2.C), game manual (ANLEITNG.TXT), and current Three.js implementation (app.js)*
+*Codebase restructured into modular architecture*
+*Based on analysis of original Atari ST source code and game manual*
