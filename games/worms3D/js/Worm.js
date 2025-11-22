@@ -1,6 +1,7 @@
 /**
  * Worms 3D - Worm Entity
  * Extends DamageableEntity with movement and aiming
+ * Enhanced with detailed visuals and animations
  */
 
 class Worm extends DamageableEntity {
@@ -32,58 +33,130 @@ class Worm extends DamageableEntity {
         // Aiming
         this.aimAngle = 45; // 0-90 degrees
 
+        // Animation state
+        this.animationTime = Math.random() * Math.PI * 2;
+        this.blinkTimer = 2 + Math.random() * 3;
+        this.leftPupil = null;
+        this.rightPupil = null;
+
         // Build worm model
         this._build();
 
         // Health bar
         this.healthBarGroup = null;
         this._createHealthBar();
+
+        // Selection indicator
+        this._createSelectionIndicator();
     }
 
     /**
-     * Build worm model (simple capsule shape)
+     * Build worm model with smooth body and cartoon eyes
      */
     _build() {
-        const bodyMat = new THREE.MeshPhongMaterial({ color: this.teamColor, shininess: 30 });
-        const eyeMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
-        const pupilMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
-
-        // Body (stretched sphere)
-        const body = new THREE.Mesh(
-            new THREE.SphereGeometry(0.8, 12, 8),
-            bodyMat
-        );
-        body.scale.set(1, 1.3, 1);
-        body.position.y = 1;
-        body.castShadow = true;
-        this.group.add(body);
-
-        // Head
-        const head = new THREE.Mesh(
-            new THREE.SphereGeometry(0.5, 10, 8),
-            bodyMat
-        );
-        head.position.y = 2.2;
-        head.castShadow = true;
-        this.group.add(head);
-
-        // Eyes
-        [-0.2, 0.2].forEach(x => {
-            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), eyeMat);
-            eye.position.set(x, 2.3, 0.4);
-            this.group.add(eye);
-
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), pupilMat);
-            pupil.position.set(x, 2.3, 0.5);
-            this.group.add(pupil);
+        const bodyMat = new THREE.MeshPhongMaterial({
+            color: this.teamColor,
+            shininess: 60,
+            specular: 0x222222
         });
 
-        // Aim indicator (small line showing direction)
+        // Build smooth worm body with overlapping spheres
+        const segments = [
+            { y: -0.5, radius: 0.55, scale: [1.1, 0.9, 0.9] },
+            { y: -0.2, radius: 0.52, scale: [1.05, 1, 0.95] },
+            { y: 0.1, radius: 0.5, scale: [1, 1.05, 1] },
+            { y: 0.4, radius: 0.48, scale: [0.95, 1.1, 1] },
+            { y: 0.7, radius: 0.46, scale: [0.9, 1.15, 1] },
+            { y: 1.0, radius: 0.45, scale: [0.9, 1.2, 1] },
+            { y: 1.3, radius: 0.48, scale: [1.1, 1.25, 1.1] } // Head
+        ];
+
+        segments.forEach(seg => {
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(seg.radius, 16, 12),
+                bodyMat
+            );
+            mesh.position.y = seg.y + 1; // Offset for base height
+            mesh.scale.set(...seg.scale);
+            mesh.castShadow = true;
+            this.group.add(mesh);
+        });
+
+        // Create eye group
+        const eyeGroup = new THREE.Group();
+        eyeGroup.position.set(0, 2.3, 0.35);
+
+        // Large white eye backgrounds
+        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        [-0.2, 0.2].forEach(x => {
+            const eyeWhite = new THREE.Mesh(
+                new THREE.SphereGeometry(0.25, 16, 12),
+                eyeWhiteMat
+            );
+            eyeWhite.position.x = x;
+            eyeWhite.scale.set(1.3, 1.5, 0.7);
+            eyeGroup.add(eyeWhite);
+        });
+
+        // Black pupils that can track movement
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        this.leftPupil = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 12, 8),
+            pupilMat
+        );
+        this.leftPupil.position.set(-0.2, 0, 0.18);
+        this.leftPupil.scale.set(1.1, 1.3, 0.6);
+        eyeGroup.add(this.leftPupil);
+
+        this.rightPupil = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 12, 8),
+            pupilMat
+        );
+        this.rightPupil.position.set(0.2, 0, 0.18);
+        this.rightPupil.scale.set(1.1, 1.3, 0.6);
+        eyeGroup.add(this.rightPupil);
+
+        // Eye shine for life
+        const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        [-0.23, 0.17].forEach((x, i) => {
+            const shine = new THREE.Mesh(
+                new THREE.SphereGeometry(0.04, 8, 6),
+                shineMat
+            );
+            shine.position.set(x, 0.06, 0.25);
+            eyeGroup.add(shine);
+        });
+
+        this.group.add(eyeGroup);
+
+        // Aim indicator
         const aimGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.5);
         const aimMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
         this.aimIndicator = new THREE.Mesh(aimGeo, aimMat);
         this.aimIndicator.position.y = 2;
         this.group.add(this.aimIndicator);
+    }
+
+    /**
+     * Create selection indicator (yellow cone above worm)
+     */
+    _createSelectionIndicator() {
+        const geometry = new THREE.ConeGeometry(0.3, 0.6, 8);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        this.selectionIndicator = new THREE.Mesh(geometry, material);
+        this.selectionIndicator.position.y = 3.8;
+        this.selectionIndicator.rotation.x = Math.PI; // Point downward
+        this.selectionIndicator.visible = false;
+        this.group.add(this.selectionIndicator);
+    }
+
+    /**
+     * Set whether this worm is selected (current turn)
+     */
+    setSelected(selected) {
+        if (this.selectionIndicator) {
+            this.selectionIndicator.visible = selected;
+        }
     }
 
     /**
@@ -121,7 +194,7 @@ class Worm extends DamageableEntity {
     }
 
     /**
-     * Update worm state
+     * Update worm state including animations
      */
     update(deltaTime) {
         if (!this.alive) return;
@@ -137,7 +210,14 @@ class Worm extends DamageableEntity {
         // Ground collision
         const groundY = this.terrain.getHeight(this.position.x, this.position.z);
         if (this.position.y <= groundY + 0.8) {
-            // Check for fall damage
+            // Check for fall damage and landing squash
+            if (!this.grounded && this.velocity.y < -5) {
+                // Landing squash effect
+                this.group.scale.y = 0.7;
+                this.group.scale.x = 1.2;
+                this.group.scale.z = 1.2;
+            }
+
             if (!this.grounded && this.velocity.y < -physics.FALL_DAMAGE_THRESHOLD) {
                 const fallDamage = Math.abs(this.velocity.y) * physics.FALL_DAMAGE_MULTIPLIER;
                 this.takeDamage(fallDamage);
@@ -150,11 +230,76 @@ class Worm extends DamageableEntity {
             this.grounded = false;
         }
 
+        // Gradually return to normal scale (from landing squash)
+        if (this.group.scale.x !== 1 || this.group.scale.z !== 1) {
+            this.group.scale.x += (1 - this.group.scale.x) * deltaTime * 5;
+            this.group.scale.z += (1 - this.group.scale.z) * deltaTime * 5;
+            this.group.scale.y += (1 - this.group.scale.y) * deltaTime * 5;
+        }
+
+        // Breathing animation (subtle idle movement)
+        this.animationTime += deltaTime;
+        const breathe = Math.sin(this.animationTime * 2) * 0.02;
+        if (Math.abs(this.group.scale.y - 1) < 0.1) {
+            this.group.scale.y = 1 + breathe;
+        }
+
+        // Blinking animation
+        this.blinkTimer -= deltaTime;
+        if (this.blinkTimer <= 0) {
+            this._blink();
+            this.blinkTimer = 2 + Math.random() * 3;
+        }
+
+        // Eye tracking based on movement
+        this._updateEyeTracking(deltaTime);
+
         // Sync position
         this.syncPosition();
 
         // Update aim indicator
         this._updateAimIndicator();
+
+        // Animate selection indicator (bob up and down)
+        if (this.selectionIndicator && this.selectionIndicator.visible) {
+            this.selectionIndicator.position.y = 3.8 + Math.sin(this.animationTime * 4) * 0.2;
+        }
+    }
+
+    /**
+     * Blink animation
+     */
+    _blink() {
+        if (!this.leftPupil || !this.rightPupil) return;
+
+        const originalScaleY = this.leftPupil.scale.y;
+        this.leftPupil.scale.y = 0.1;
+        this.rightPupil.scale.y = 0.1;
+
+        setTimeout(() => {
+            if (this.alive && this.leftPupil && this.rightPupil) {
+                this.leftPupil.scale.y = originalScaleY;
+                this.rightPupil.scale.y = originalScaleY;
+            }
+        }, 100);
+    }
+
+    /**
+     * Update eye tracking based on velocity
+     */
+    _updateEyeTracking(deltaTime) {
+        if (!this.leftPupil || !this.rightPupil) return;
+
+        // Track movement direction
+        if (Math.abs(this.velocity.x) > 0.1) {
+            const lookX = Math.sign(this.velocity.x) * 0.04;
+            this.leftPupil.position.x = -0.2 + lookX;
+            this.rightPupil.position.x = 0.2 + lookX;
+        } else {
+            // Return to center
+            this.leftPupil.position.x += (-0.2 - this.leftPupil.position.x) * deltaTime * 5;
+            this.rightPupil.position.x += (0.2 - this.rightPupil.position.x) * deltaTime * 5;
+        }
     }
 
     /**

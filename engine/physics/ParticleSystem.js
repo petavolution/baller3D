@@ -211,6 +211,106 @@ class ParticleSystem {
     }
 
     /**
+     * Create water splash effect
+     * @param {THREE.Vector3} position - Impact position
+     * @param {Object} options - Splash options
+     */
+    createSplash(position, options = {}) {
+        const count = options.count || 15;
+        const color = options.color || 0x4499ff;
+        const speed = options.speed || 5;
+
+        for (let i = 0; i < count; i++) {
+            const geometry = new THREE.SphereGeometry(Utils.random(0.1, 0.4), 4, 4);
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const particle = new THREE.Mesh(geometry, material);
+            particle.position.copy(position);
+
+            const angle = Math.random() * Math.PI * 2;
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * Utils.random(2, speed),
+                    Utils.random(4, 8),
+                    Math.sin(angle) * Utils.random(2, speed)
+                ),
+                life: 0.8,
+                decay: Utils.random(0.02, 0.04),
+                shrinkRate: 0.97
+            };
+
+            this.scene.add(particle);
+            this.particles.push(particle);
+        }
+    }
+
+    /**
+     * Create speech bubble above position
+     * @param {THREE.Vector3} position - World position
+     * @param {string} text - Text to display
+     * @param {Object} options - Display options
+     */
+    createSpeechBubble(position, text, options = {}) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+
+        // Draw bubble background
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+
+        const x = 20, y = 20, w = 216, h = 60, r = 15;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+        ctx.lineTo(x + r, y + h);
+        ctx.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+        ctx.lineTo(x, y + r);
+        ctx.arc(x + r, y + r, r, Math.PI, -Math.PI / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw text
+        ctx.fillStyle = 'black';
+        ctx.font = `bold ${options.fontSize || 32}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 128, 55);
+
+        // Create sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.copy(position);
+        sprite.position.y += options.yOffset || 3;
+        sprite.scale.set(options.scale || 3, (options.scale || 3) / 2, 1);
+
+        sprite.userData = {
+            velocity: new THREE.Vector3(0, 0, 0),
+            life: options.duration || 1.5,
+            decay: 1,
+            shrinkRate: 1.0,
+            isSprite: true
+        };
+
+        this.scene.add(sprite);
+        this.particles.push(sprite);
+    }
+
+    /**
      * Get particle count
      */
     get count() {

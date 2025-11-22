@@ -45,6 +45,7 @@ class WormsGame extends Engine {
         this._initControls();
         this._initAmmo();
         this._randomizeWind();
+        this._updateSelectionIndicators();
 
         Debug.info('WormsGame: Initialized');
         return this;
@@ -172,6 +173,20 @@ class WormsGame extends Engine {
     }
 
     /**
+     * Update selection indicators on all worms
+     */
+    _updateSelectionIndicators() {
+        const currentWorm = this.getCurrentWorm();
+        this.teams.forEach(team => {
+            team.forEach(worm => {
+                if (worm.setSelected) {
+                    worm.setSelected(worm === currentWorm);
+                }
+            });
+        });
+    }
+
+    /**
      * Handle key down
      */
     _onKeyDown(e) {
@@ -281,6 +296,11 @@ class WormsGame extends Engine {
             this.state.ammo[this.state.currentWeapon]--;
         }
 
+        // Battle cry speech bubble
+        const battleCries = ['Fire!', 'Incoming!', 'Take this!', 'Eat this!'];
+        const cry = battleCries[Math.floor(Math.random() * battleCries.length)];
+        this.particles.createSpeechBubble(worm.position.clone(), cry);
+
         const position = worm.getFirePosition();
         const direction = worm.getFireDirection();
         const speed = power * weapon.speed;
@@ -335,8 +355,16 @@ class WormsGame extends Engine {
                     worm.update(deltaTime);
                     worm.updateHealthBar(this.camera);
 
-                    // Check water death
+                    // Check water death with splash
                     if (worm.position.y < -5) {
+                        // Create splash before death
+                        this.particles.createSplash(
+                            new THREE.Vector3(worm.position.x, -5, worm.position.z)
+                        );
+                        // Death phrase
+                        const deathPhrases = ['Nooo!', 'Argh!', 'Bye!', 'Oof!'];
+                        const phrase = deathPhrases[Math.floor(Math.random() * deathPhrases.length)];
+                        this.particles.createSpeechBubble(worm.position.clone(), phrase);
                         worm.takeDamage(worm.health); // Instant death
                     }
                 }
@@ -456,6 +484,9 @@ class WormsGame extends Engine {
         this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
         this.state.phase = 'move';
         this._randomizeWind();
+
+        // Update selection indicators
+        this._updateSelectionIndicators();
 
         // Focus camera on current worm
         const worm = this.getCurrentWorm();
