@@ -280,33 +280,55 @@ All files should remain under 300 lines for maintainability:
 
 ## Progress Tracking
 
-### Phase 1: Engine Extraction - IN PROGRESS
+### Phase 1: Engine Extraction - COMPLETE ✓
 
-**Completed:**
-- [x] Created `engine/` directory structure
+**Engine Core:**
 - [x] `engine/core/Utils.js` - Three.js disposal, math helpers
 - [x] `engine/core/Debug.js` - Logging and error tracking
 - [x] `engine/core/ConfigBase.js` - Base config with `createGameConfig()`
-- [x] `engine/core/Engine.js` - Scene/camera/renderer setup, game loop
+- [x] `engine/core/Engine.js` - Scene/camera/renderer setup, game loop, camera tracking
+
+**Engine Entities:**
 - [x] `engine/entities/Entity.js` - Base Entity and DamageableEntity classes
+
+**Engine World:**
+- [x] `engine/world/Terrain.js` - BaseTerrain for destructible heightmap
+
+**Engine Physics:**
 - [x] `engine/physics/ParticleSystem.js` - Explosions, debris, floating text
-- [x] `engine/README.md` - Load order documentation
+- [x] `engine/physics/Projectile.js` - BaseProjectile and BouncingProjectile
+
+**Documentation:**
+- [x] `engine/README.md` - Load order and usage documentation
 - [x] `engine/test-engine.html` - Standalone engine test
 
-**Remaining Phase 1:**
-- [ ] Extract terrain system to engine
-- [ ] Create base Projectile class
+### Phase 5: Ballerburg3D Game - IN PROGRESS
 
-### Phase 2-7: Not started
+**Completed:**
+- [x] `games/ballerburg3D/js/BallerConfig.js` - Game config using engine
+- [x] `games/ballerburg3D/js/BallerTerrain.js` - Dual-mountain terrain
+- [x] `games/ballerburg3D/js/BallerGame.js` - Game controller extending Engine
+- [x] `games/ballerburg3D/index.html` - Entry point with engine load order
+
+**Remaining:**
+- [ ] Migrate Castle.js to use engine Entity base
+- [ ] Migrate Cannon.js to use engine Entity base
+- [ ] Add weapon selector UI integration
+- [ ] Full validation of engine-based version
+
+### Phase 2-4, 6-7: Planned
 
 ## Next Steps
 
 1. ~~Create directory structure~~ ✓
 2. ~~Start with `engine/core/` extraction~~ ✓
 3. ~~Create Entity base class~~ ✓
-4. Extract terrain system (configurable generation)
-5. Create generic Projectile class
-6. Continue through phases
+4. ~~Extract terrain system~~ ✓
+5. ~~Create generic Projectile class~~ ✓
+6. ~~Create Ballerburg3D game using engine~~ ✓
+7. Migrate existing entities to use engine base classes
+8. Create Worms3D game using engine
+9. Add comprehensive tests for engine
 
 ---
 
