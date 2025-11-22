@@ -5,6 +5,8 @@
 
 class Game {
     constructor() {
+        Debug.info('Game: Initializing...');
+
         // Three.js core
         this.scene = null;
         this.camera = null;
@@ -36,7 +38,13 @@ class Game {
         this.lastTime = 0;
         this.trajectoryPoints = [];
 
-        this._init();
+        try {
+            this._init();
+            Debug.info('Game: Initialization complete');
+        } catch (e) {
+            Debug.error('Game: Initialization failed', { error: e.message, stack: e.stack });
+            throw e;
+        }
     }
 
     /**
@@ -228,8 +236,12 @@ class Game {
      * Update trajectory preview
      */
     _updateTrajectory() {
-        // Clear old
-        this.trajectoryPoints.forEach(p => this.scene.remove(p));
+        // Clear old trajectory points AND dispose materials to prevent memory leak
+        this.trajectoryPoints.forEach(p => {
+            this.scene.remove(p);
+            if (p.geometry) p.geometry.dispose();
+            if (p.material) p.material.dispose();
+        });
         this.trajectoryPoints = [];
 
         if (this.projectile || !this.state.charging) return;
@@ -240,7 +252,8 @@ class Game {
         const pos = cannon.getFirePosition();
         const dir = cannon.getFireDirection();
         const power = (this.state.power / 100) * Config.MAX_POWER;
-        const vel = dir.multiplyScalar(power);
+        // CRITICAL: Clone direction before multiplying to avoid mutation
+        const vel = dir.clone().multiplyScalar(power);
 
         for (let i = 0; i < 25; i++) {
             vel.y += Config.GRAVITY * 0.1;
@@ -286,8 +299,10 @@ class Game {
         const pos = cannon.getFirePosition();
         const dir = cannon.getFireDirection();
         const power = (this.state.power / 100) * Config.MAX_POWER;
-        const vel = dir.multiplyScalar(power);
+        // CRITICAL: Clone direction before multiplying to avoid mutation
+        const vel = dir.clone().multiplyScalar(power);
 
+        Debug.debug('Fire projectile', { power, weapon: weapon.name, position: pos, velocity: vel });
         this.projectile = new Projectile(this.scene, pos, vel, weapon);
 
         // Consume ammo
@@ -296,8 +311,12 @@ class Game {
             this.ui.updateAmmo(this.state.ammo);
         }
 
-        // Clear trajectory
-        this.trajectoryPoints.forEach(p => this.scene.remove(p));
+        // Clear trajectory with proper disposal
+        this.trajectoryPoints.forEach(p => {
+            this.scene.remove(p);
+            if (p.geometry) p.geometry.dispose();
+            if (p.material) p.material.dispose();
+        });
         this.trajectoryPoints = [];
 
         this.state.power = 0;
@@ -378,13 +397,21 @@ class Game {
      * Restart game
      */
     restart() {
-        // Cleanup
+        Debug.info('Game: Restarting...');
+
+        // Cleanup with proper disposal
         this.castles.forEach(c => c.dispose());
         this.cannons.forEach(c => c.dispose());
-        this.terrain.dispose();
-        this.physics.clear();
+        if (this.terrain) this.terrain.dispose();
+        if (this.physics) this.physics.clear();
         if (this.projectile) this.projectile.dispose();
-        this.trajectoryPoints.forEach(p => this.scene.remove(p));
+
+        // Dispose trajectory points properly
+        this.trajectoryPoints.forEach(p => {
+            this.scene.remove(p);
+            if (p.geometry) p.geometry.dispose();
+            if (p.material) p.material.dispose();
+        });
 
         // Reset state
         this.state = {

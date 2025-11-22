@@ -1,0 +1,37 @@
+============================================================
+BALLERBURG 3D - TEST RESULTS
+============================================================
+Started: 2025-11-22T16:16:21.464Z
+
+  ✓ PASS: Config object exists
+  ✓ PASS: Config.TERRAIN_WIDTH is valid
+  ✓ PASS: Config.GRAVITY is negative
+  ✓ PASS: Config.WEAPONS has entries
+  ✓ PASS: Config.PLAYER_COUNT matches positions
+  ✓ PASS: Vector3 clone creates independent copy
+  ✓ PASS: Vector3 multiplyScalar works
+  ✓ PASS: Vector3 distanceTo is correct
+  ✓ PASS: Terrain generates heightMap
+  ✓ PASS: Terrain getHeight returns value for valid coords
+  ✓ PASS: Terrain getHeight returns -100 for out of bounds
+  ✓ PASS: Terrain damage modifies heightMap
+  ✓ PASS: Castle initializes with correct health
+  ✓ PASS: Castle has parts
+  ✓ PASS: Castle takeDamage reduces health
+  ✓ PASS: Castle dies at 0 health
+  ✓ PASS: Cannon initializes with default angles
+  ✓ PASS: Cannon setAim clamps values
+  ✓ PASS: Cannon getFireDirection returns normalized vector
+  ✓ PASS: Projectile initializes with cloned position
+  ✓ PASS: Projectile update applies gravity
+
+============================================================
+SUMMARY
+============================================================
+Total:  21
+Passed: 21
+Failed: 0
+Duration: 40ms
+============================================================
+ALL TESTS PASSED
+

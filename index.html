@@ -94,7 +94,8 @@
     <!-- Three.js from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Game Modules -->
+    <!-- Game Modules (load order is critical) -->
+    <script src="js/core/Debug.js"></script>
     <script src="js/core/Config.js"></script>
     <script src="js/entities/Terrain.js"></script>
     <script src="js/entities/Castle.js"></script>
@@ -107,7 +108,24 @@
     <!-- Initialize -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            window.game = new Game();
+            Debug.info('DOM loaded, initializing game...');
+            try {
+                window.game = new Game();
+                Debug.info('Game instance created successfully');
+
+                // Make debug available globally for console access
+                window.Debug = Debug;
+
+                // Auto-save log on errors
+                window.onerror = function(msg, url, line, col, error) {
+                    Debug.error('Uncaught error', { message: msg, url, line, col, stack: error?.stack });
+                    return false;
+                };
+
+            } catch (e) {
+                Debug.error('Failed to initialize game', { error: e.message, stack: e.stack });
+                console.error('Game initialization failed:', e);
+            }
         });
     </script>
 </body>
