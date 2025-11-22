@@ -321,9 +321,7 @@ class Game {
 
         this.state.power = 0;
         this.ui.updatePower(0, false);
-
-        // Schedule next turn
-        setTimeout(() => this._nextTurn(), 5000);
+        // Note: Turn change is now triggered by impact detection in _animate()
     }
 
     /**
@@ -476,11 +474,16 @@ class Game {
             // Update projectile
             if (this.projectile) {
                 const active = this.projectile.update(deltaTime, this.terrain, this.state.wind);
-                if (!active) {
-                    if (!this.projectile.exploded) {
-                        this.projectile.explode();
+                if (!active && !this.projectile.exploded) {
+                    this.projectile.explode();
+
+                    // Only create explosion effects for in-bounds impacts
+                    if (!this.projectile.outOfBounds) {
                         this._handleImpact(this.projectile.position, this.projectile.weapon);
                     }
+
+                    // Schedule turn change after brief delay for explosion visibility
+                    setTimeout(() => this._nextTurn(), 1500);
                 }
             }
 

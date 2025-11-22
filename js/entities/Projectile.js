@@ -10,6 +10,8 @@ class Projectile {
         this.velocity = velocity.clone();
         this.weapon = weapon;
         this.exploded = false;
+        this.disposed = false;
+        this.outOfBounds = false;
         this.trail = [];
 
         // Create mesh
@@ -31,7 +33,7 @@ class Projectile {
      * @returns {boolean} true if still active
      */
     update(deltaTime, terrain, wind) {
-        if (this.exploded) return false;
+        if (this.exploded || this.disposed) return false;
 
         // Apply physics
         this.velocity.y += Config.GRAVITY * deltaTime;
@@ -60,11 +62,11 @@ class Projectile {
             }
         }
 
-        // Out of bounds check
+        // Out of bounds check - mark flag instead of disposing
         if (Math.abs(this.position.x) > Config.TERRAIN_WIDTH / 2 + 20 ||
             Math.abs(this.position.z) > Config.TERRAIN_DEPTH / 2 + 20 ||
             this.position.y < -15) {
-            this.dispose();
+            this.outOfBounds = true;
             return false;
         }
 
@@ -80,11 +82,17 @@ class Projectile {
     }
 
     /**
-     * Clean up resources
+     * Clean up resources (safe to call multiple times)
      */
     dispose() {
-        this.scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        if (this.disposed) return;
+        this.disposed = true;
+
+        if (this.mesh) {
+            this.scene.remove(this.mesh);
+            if (this.mesh.geometry) this.mesh.geometry.dispose();
+            if (this.mesh.material) this.mesh.material.dispose();
+            this.mesh = null;
+        }
     }
 }
