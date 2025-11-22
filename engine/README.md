@@ -15,13 +15,17 @@ Scripts must be loaded in this order (after Three.js):
 <!-- 2. Base classes -->
 <script src="engine/entities/Entity.js"></script>
 
-<!-- 3. Systems -->
-<script src="engine/physics/ParticleSystem.js"></script>
+<!-- 3. World systems -->
+<script src="engine/world/Terrain.js"></script>
 
-<!-- 4. Main engine (depends on all above) -->
+<!-- 4. Physics systems -->
+<script src="engine/physics/ParticleSystem.js"></script>
+<script src="engine/physics/Projectile.js"></script>
+
+<!-- 5. Main engine (depends on all above) -->
 <script src="engine/core/Engine.js"></script>
 
-<!-- 5. Game-specific code -->
+<!-- 6. Game-specific code -->
 <script src="games/ballerburg3D/Config.js"></script>
 <script src="games/ballerburg3D/Game.js"></script>
 ```
@@ -75,5 +79,9 @@ game.init().start();
 ### Entities
 - **Entity.js** - Base `Entity` and `DamageableEntity` classes
 
+### World
+- **Terrain.js** - `BaseTerrain` for destructible heightmap terrain (extend for custom generation)
+
 ### Physics
 - **ParticleSystem.js** - Explosions, debris, floating text
+- **Projectile.js** - `BaseProjectile` and `BouncingProjectile` for artillery mechanics
