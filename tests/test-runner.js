@@ -693,6 +693,200 @@ runner.describe('Projectile', () => {
 });
 
 // ============================================================================
+// Engine Tests
+// ============================================================================
+
+// --- Utils Tests ---
+const Utils = {
+    clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+    lerp: (a, b, t) => a + (b - a) * t,
+    degToRad: (degrees) => degrees * Math.PI / 180,
+    random: (min, max) => min + Math.random() * (max - min)
+};
+global.Utils = Utils;
+
+runner.describe('Utils', () => {
+    runner.test('Utils.clamp works correctly', () => {
+        runner.assertEqual(Utils.clamp(5, 0, 10), 5, 'Value in range');
+        runner.assertEqual(Utils.clamp(-5, 0, 10), 0, 'Value below min');
+        runner.assertEqual(Utils.clamp(15, 0, 10), 10, 'Value above max');
+    });
+
+    runner.test('Utils.lerp interpolates correctly', () => {
+        runner.assertEqual(Utils.lerp(0, 10, 0), 0, 'lerp at t=0');
+        runner.assertEqual(Utils.lerp(0, 10, 1), 10, 'lerp at t=1');
+        runner.assertEqual(Utils.lerp(0, 10, 0.5), 5, 'lerp at t=0.5');
+    });
+
+    runner.test('Utils.degToRad converts correctly', () => {
+        runner.assertNearlyEqual(Utils.degToRad(180), Math.PI, 0.0001);
+        runner.assertNearlyEqual(Utils.degToRad(90), Math.PI / 2, 0.0001);
+        runner.assertNearlyEqual(Utils.degToRad(0), 0, 0.0001);
+    });
+});
+
+// --- Entity Base Class Tests ---
+class Entity {
+    constructor(scene) {
+        this.scene = scene;
+        this.group = new THREE.Group();
+        this.position = new THREE.Vector3();
+        this.alive = true;
+        this.disposed = false;
+        this.scene.add(this.group);
+    }
+    kill() { this.alive = false; }
+    isActive() { return this.alive && !this.disposed; }
+    syncPosition() { this.group.position.copy(this.position); }
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.scene.remove(this.group);
+    }
+}
+
+class DamageableEntity extends Entity {
+    constructor(scene, maxHealth = 100) {
+        super(scene);
+        this.health = maxHealth;
+        this.maxHealth = maxHealth;
+    }
+    takeDamage(amount) {
+        if (!this.alive) return false;
+        this.health = Math.max(0, this.health - amount);
+        if (this.health <= 0) { this.kill(); return true; }
+        return false;
+    }
+    heal(amount) { this.health = Math.min(this.maxHealth, this.health + amount); }
+    getHealthPercent() { return this.health / this.maxHealth; }
+}
+
+global.Entity = Entity;
+global.DamageableEntity = DamageableEntity;
+
+runner.describe('Entity', () => {
+    runner.test('Entity initializes correctly', () => {
+        const scene = new THREE.Scene();
+        const entity = new Entity(scene);
+        runner.assertTrue(entity.alive, 'Entity should be alive');
+        runner.assertFalse(entity.disposed, 'Entity should not be disposed');
+    });
+
+    runner.test('Entity.kill marks entity as dead', () => {
+        const scene = new THREE.Scene();
+        const entity = new Entity(scene);
+        entity.kill();
+        runner.assertFalse(entity.alive, 'Entity should be dead');
+        runner.assertTrue(entity.isActive() === false, 'isActive should return false');
+    });
+
+    runner.test('Entity.dispose is safe to call multiple times', () => {
+        const scene = new THREE.Scene();
+        const entity = new Entity(scene);
+        entity.dispose();
+        entity.dispose(); // Should not throw
+        runner.assertTrue(entity.disposed, 'Entity should be disposed');
+    });
+});
+
+runner.describe('DamageableEntity', () => {
+    runner.test('DamageableEntity initializes with health', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 50);
+        runner.assertEqual(entity.health, 50);
+        runner.assertEqual(entity.maxHealth, 50);
+    });
+
+    runner.test('DamageableEntity.takeDamage reduces health', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 100);
+        entity.takeDamage(30);
+        runner.assertEqual(entity.health, 70);
+    });
+
+    runner.test('DamageableEntity dies at 0 health', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 50);
+        const died = entity.takeDamage(50);
+        runner.assertTrue(died, 'takeDamage should return true when killed');
+        runner.assertFalse(entity.alive, 'Entity should be dead');
+    });
+
+    runner.test('DamageableEntity.heal increases health', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 100);
+        entity.takeDamage(50);
+        entity.heal(20);
+        runner.assertEqual(entity.health, 70);
+    });
+
+    runner.test('DamageableEntity.heal caps at maxHealth', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 100);
+        entity.takeDamage(10);
+        entity.heal(50);
+        runner.assertEqual(entity.health, 100, 'Health should not exceed max');
+    });
+
+    runner.test('DamageableEntity.getHealthPercent returns correct value', () => {
+        const scene = new THREE.Scene();
+        const entity = new DamageableEntity(scene, 100);
+        entity.takeDamage(25);
+        runner.assertNearlyEqual(entity.getHealthPercent(), 0.75, 0.01);
+    });
+});
+
+// --- Config System Tests ---
+const EngineConfig = {
+    PHYSICS: { GRAVITY: -9.8 },
+    CAMERA: { FOV: 50 }
+};
+
+function mergeConfig(base, override) {
+    const result = { ...base };
+    for (const key in override) {
+        if (override[key] && typeof override[key] === 'object' && !Array.isArray(override[key])) {
+            result[key] = mergeConfig(base[key] || {}, override[key]);
+        } else {
+            result[key] = override[key];
+        }
+    }
+    return result;
+}
+
+function createGameConfig(gameConfig) {
+    return mergeConfig(EngineConfig, gameConfig);
+}
+
+global.EngineConfig = EngineConfig;
+global.createGameConfig = createGameConfig;
+
+runner.describe('Config System', () => {
+    runner.test('createGameConfig merges with defaults', () => {
+        const gameConfig = createGameConfig({
+            PHYSICS: { WIND_MAX: 5 }
+        });
+        runner.assertEqual(gameConfig.PHYSICS.GRAVITY, -9.8, 'Should have default gravity');
+        runner.assertEqual(gameConfig.PHYSICS.WIND_MAX, 5, 'Should have game-specific wind');
+    });
+
+    runner.test('createGameConfig overrides defaults', () => {
+        const gameConfig = createGameConfig({
+            PHYSICS: { GRAVITY: -25 }
+        });
+        runner.assertEqual(gameConfig.PHYSICS.GRAVITY, -25, 'Should override gravity');
+    });
+
+    runner.test('createGameConfig preserves nested defaults', () => {
+        const gameConfig = createGameConfig({
+            GAMEPLAY: { MAX_POWER: 50 }
+        });
+        runner.assertEqual(gameConfig.CAMERA.FOV, 50, 'Should preserve camera defaults');
+        runner.assertEqual(gameConfig.GAMEPLAY.MAX_POWER, 50, 'Should have new setting');
+    });
+});
+
+// ============================================================================
 // Run Tests
 // ============================================================================
 

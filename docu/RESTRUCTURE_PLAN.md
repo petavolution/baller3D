@@ -302,21 +302,28 @@ All files should remain under 300 lines for maintainability:
 - [x] `engine/README.md` - Load order and usage documentation
 - [x] `engine/test-engine.html` - Standalone engine test
 
-### Phase 5: Ballerburg3D Game - IN PROGRESS
+### Phase 5: Ballerburg3D Game - COMPLETE ✓
 
-**Completed:**
+**Game Config & Extensions:**
 - [x] `games/ballerburg3D/js/BallerConfig.js` - Game config using engine
 - [x] `games/ballerburg3D/js/BallerTerrain.js` - Dual-mountain terrain
-- [x] `games/ballerburg3D/js/BallerGame.js` - Game controller extending Engine
-- [x] `games/ballerburg3D/index.html` - Entry point with engine load order
 
-**Remaining:**
-- [ ] Migrate Castle.js to use engine Entity base
-- [ ] Migrate Cannon.js to use engine Entity base
-- [ ] Add weapon selector UI integration
-- [ ] Full validation of engine-based version
+**Entities (extend engine base classes):**
+- [x] `games/ballerburg3D/js/Castle.js` - Extends DamageableEntity
+- [x] `games/ballerburg3D/js/Cannon.js` - Extends Entity
 
-### Phase 2-4, 6-7: Planned
+**Game Controller:**
+- [x] `games/ballerburg3D/js/BallerGame.js` - Extends Engine
+- [x] `games/ballerburg3D/index.html` - Entry point with weapon selector
+
+**Features:**
+- [x] Weapon selector UI with keyboard (1-5) and buttons
+- [x] Health bar billboard updates
+- [x] Part-based castle damage with impact point
+
+### Phase 6: Worms3D Game - PLANNED
+
+### Phase 7: Testing & Polish - PLANNED
 
 ## Next Steps
 
@@ -326,9 +333,10 @@ All files should remain under 300 lines for maintainability:
 4. ~~Extract terrain system~~ ✓
 5. ~~Create generic Projectile class~~ ✓
 6. ~~Create Ballerburg3D game using engine~~ ✓
-7. Migrate existing entities to use engine base classes
-8. Create Worms3D game using engine
-9. Add comprehensive tests for engine
+7. ~~Migrate entities to use engine base classes~~ ✓
+8. ~~Add weapon selector UI~~ ✓
+9. Create comprehensive tests for engine
+10. Create Worms3D game using engine
 
 ---
 
