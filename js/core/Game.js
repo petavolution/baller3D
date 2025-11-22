@@ -454,9 +454,8 @@ class Game {
         const deltaTime = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
 
-        if (deltaTime <= 0) return;
-
-        if (!this.state.gameOver) {
+        // Skip game logic updates on first frame (deltaTime=0), but still render
+        if (deltaTime > 0 && !this.state.gameOver) {
             // Turn timer
             this.state.turnTimer -= deltaTime;
             if (this.state.turnTimer <= 0 && !this.projectile) {
