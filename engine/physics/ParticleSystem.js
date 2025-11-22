@@ -62,6 +62,11 @@ class ParticleSystem {
         if (options.flash !== false) {
             this._createFlash(position, radius);
         }
+
+        // Mobile vibration feedback
+        if (options.vibrate !== false && typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
     }
 
     /**

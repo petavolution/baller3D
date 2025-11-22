@@ -39,6 +39,9 @@ class Worm extends DamageableEntity {
         this.leftPupil = null;
         this.rightPupil = null;
 
+        // Health bar visibility timer (shows for 3s after damage)
+        this.damageShowTimer = 0;
+
         // Build worm model
         this._build();
 
@@ -204,6 +207,9 @@ class Worm extends DamageableEntity {
         // Apply gravity
         this.velocity.y += physics.GRAVITY * deltaTime;
 
+        // Cap terminal velocity to prevent physics issues
+        this.velocity.y = Math.max(this.velocity.y, -30);
+
         // Move
         this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
 
@@ -225,9 +231,19 @@ class Worm extends DamageableEntity {
 
             this.position.y = groundY + 0.8;
             this.velocity.y = 0;
+
+            // Apply ground friction
+            this.velocity.x *= 0.85;
+            this.velocity.z *= 0.85;
+
             this.grounded = true;
         } else {
             this.grounded = false;
+        }
+
+        // Update damage show timer
+        if (this.damageShowTimer > 0) {
+            this.damageShowTimer -= deltaTime;
         }
 
         // Gradually return to normal scale (from landing squash)
@@ -374,10 +390,18 @@ class Worm extends DamageableEntity {
     }
 
     /**
-     * Update health bar
+     * Update health bar (visible for selected worm or after damage)
+     * @param {THREE.Camera} camera
+     * @param {boolean} isSelected - Whether this worm is currently selected
      */
-    updateHealthBar(camera) {
+    updateHealthBar(camera, isSelected = false) {
         if (!this.healthBarGroup || !camera || !this.alive) return;
+
+        // Show health bar if selected or recently damaged
+        const shouldShow = isSelected || this.damageShowTimer > 0;
+        this.healthBarGroup.visible = shouldShow;
+
+        if (!shouldShow) return;
 
         this.healthBarGroup.position.set(
             this.position.x,
@@ -393,6 +417,17 @@ class Worm extends DamageableEntity {
         const color = this.health > 60 ? 0x00ff00 :
             (this.health > 30 ? 0xffff00 : 0xff0000);
         this.healthBarFill.material.color.setHex(color);
+    }
+
+    /**
+     * Override takeDamage to trigger damage show timer
+     */
+    takeDamage(amount) {
+        super.takeDamage(amount);
+        // Show health bar for 3 seconds after taking damage
+        if (amount > 0) {
+            this.damageShowTimer = 3;
+        }
     }
 
     /**

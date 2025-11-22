@@ -349,11 +349,12 @@ class WormsGame extends Engine {
         }
 
         // Update all worms
+        const currentWorm = this.getCurrentWorm();
         this.teams.forEach(team => {
             team.forEach(worm => {
                 if (worm.alive) {
                     worm.update(deltaTime);
-                    worm.updateHealthBar(this.camera);
+                    worm.updateHealthBar(this.camera, worm === currentWorm);
 
                     // Check water death with splash
                     if (worm.position.y < -5) {
