@@ -1,7 +1,7 @@
 ============================================================
 BALLERBURG 3D - TEST RESULTS
 ============================================================
-Started: 2025-11-22T21:14:31.636Z
+Started: 2025-11-22T21:17:58.729Z
 
   ✓ PASS: Config object exists
   ✓ PASS: Config.TERRAIN_WIDTH is valid
@@ -39,14 +39,25 @@ Started: 2025-11-22T21:14:31.636Z
   ✓ PASS: createGameConfig merges with defaults
   ✓ PASS: createGameConfig overrides defaults
   ✓ PASS: createGameConfig preserves nested defaults
+  ✓ PASS: ParticleSystem initializes empty
+  ✓ PASS: ParticleSystem.createExplosion adds particles
+  ✓ PASS: ParticleSystem.createSplash adds particles
+  ✓ PASS: ParticleSystem.createSpeechBubble adds sprite
+  ✓ PASS: ParticleSystem.createDebris adds debris particles
+  ✓ PASS: ParticleSystem.clear removes all particles
+  ✓ PASS: TrajectoryPreview initializes empty
+  ✓ PASS: TrajectoryPreview.update generates points
+  ✓ PASS: TrajectoryPreview applies gravity to trajectory
+  ✓ PASS: TrajectoryPreview applies wind
+  ✓ PASS: TrajectoryPreview.clear removes all points
 
 ============================================================
 SUMMARY
 ============================================================
-Total:  36
-Passed: 36
+Total:  47
+Passed: 47
 Failed: 0
-Duration: 42ms
+Duration: 51ms
 ============================================================
 ALL TESTS PASSED
 
