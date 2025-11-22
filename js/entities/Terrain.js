@@ -84,11 +84,7 @@ class Terrain {
      * Create/update terrain mesh
      */
     _updateMesh() {
-        if (this.mesh) {
-            this.scene.remove(this.mesh);
-            this.mesh.geometry.dispose();
-            this.mesh.material.dispose();
-        }
+        Utils.removeAndDispose(this.scene, this.mesh);
 
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
@@ -195,10 +191,7 @@ class Terrain {
      * Clean up resources
      */
     dispose() {
-        if (this.mesh) {
-            this.scene.remove(this.mesh);
-            this.mesh.geometry.dispose();
-            this.mesh.material.dispose();
-        }
+        Utils.removeAndDispose(this.scene, this.mesh);
+        this.mesh = null;
     }
 }

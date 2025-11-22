@@ -99,8 +99,8 @@ class Cannon {
      * Set aim angles
      */
     setAim(vertical, horizontal) {
-        this.verticalAngle = Math.max(10, Math.min(80, vertical));
-        this.horizontalAngle = Math.max(-45, Math.min(45, horizontal));
+        this.verticalAngle = Utils.clamp(vertical, 10, 80);
+        this.horizontalAngle = Utils.clamp(horizontal, -45, 45);
         this.updateRotation();
     }
 
@@ -108,10 +108,6 @@ class Cannon {
      * Clean up resources
      */
     dispose() {
-        this.scene.remove(this.group);
-        this.group.traverse(child => {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) child.material.dispose();
-        });
+        Utils.removeAndDispose(this.scene, this.group);
     }
 }

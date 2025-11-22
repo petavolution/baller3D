@@ -104,9 +104,7 @@ class Physics {
             particle.scale.multiplyScalar(0.98);
 
             if (data.life <= 0) {
-                this.scene.remove(particle);
-                particle.geometry.dispose();
-                particle.material.dispose();
+                Utils.removeAndDispose(this.scene, particle);
                 return false;
             }
             return true;
@@ -117,11 +115,7 @@ class Physics {
      * Clear all particles
      */
     clear() {
-        this.particles.forEach(particle => {
-            this.scene.remove(particle);
-            particle.geometry.dispose();
-            particle.material.dispose();
-        });
+        this.particles.forEach(p => Utils.removeAndDispose(this.scene, p));
         this.particles = [];
     }
 }
