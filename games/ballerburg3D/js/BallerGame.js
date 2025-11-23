@@ -16,6 +16,7 @@ class BallerGame extends Engine {
 
         // Systems
         this.particles = null;
+        this.trajectoryPreview = null;
 
         // Game state
         this.state = {
@@ -59,6 +60,14 @@ class BallerGame extends Engine {
      */
     _initSystems() {
         this.particles = new ParticleSystem(this.scene, this.config);
+
+        // Trajectory preview for aiming visualization
+        this.trajectoryPreview = new TrajectoryPreview(this.scene, this.config, {
+            pointCount: 30,
+            pointRadius: 0.2,
+            color: 0xffff00,
+            timeStep: 0.08
+        });
 
         // Initialize AI controllers using original Ballerburg personality system
         // Strategy (cw) 1-5 and skill (cx) 1-5 from BALLER2.C
@@ -202,15 +211,19 @@ class BallerGame extends Engine {
         switch (e.key) {
             case 'ArrowUp':
                 cannon.setAim(cannon.verticalAngle + 2, cannon.horizontalAngle);
+                this._updateTrajectoryPreview();
                 break;
             case 'ArrowDown':
                 cannon.setAim(cannon.verticalAngle - 2, cannon.horizontalAngle);
+                this._updateTrajectoryPreview();
                 break;
             case 'ArrowLeft':
                 cannon.setAim(cannon.verticalAngle, cannon.horizontalAngle - 3);
+                this._updateTrajectoryPreview();
                 break;
             case 'ArrowRight':
                 cannon.setAim(cannon.verticalAngle, cannon.horizontalAngle + 3);
+                this._updateTrajectoryPreview();
                 break;
             case ' ':
                 this._startCharge();
@@ -241,11 +254,37 @@ class BallerGame extends Engine {
     }
 
     /**
+     * Update trajectory preview based on current aim
+     */
+    _updateTrajectoryPreview() {
+        if (!this.trajectoryPreview || this._isCurrentPlayerAI()) return;
+
+        const cannon = this.cannons[this.state.currentPlayer];
+        if (!cannon) return;
+
+        // Calculate preview velocity (use current power or default)
+        const weapon = this.config.WEAPONS[this.state.currentWeapon];
+        const power = this.state.charging ? this.state.power : 20;
+        const speed = Math.max(10, power) * weapon.speed;
+
+        const position = cannon.getFirePosition();
+        const direction = cannon.getFireDirection();
+        const velocity = direction.multiplyScalar(speed);
+
+        this.trajectoryPreview.update(position, velocity, this.state.wind, this.terrain);
+    }
+
+    /**
      * Fire projectile
      */
     _fire() {
         if (!this.state.charging || this.projectile) return;
         this.state.charging = false;
+
+        // Clear trajectory preview when firing
+        if (this.trajectoryPreview) {
+            this.trajectoryPreview.clear();
+        }
 
         const cannon = this.cannons[this.state.currentPlayer];
         const weapon = this.config.WEAPONS[this.state.currentWeapon];
@@ -287,12 +326,14 @@ class BallerGame extends Engine {
      * Update game logic
      */
     update(deltaTime) {
-        // Update charging
+        // Update charging and trajectory preview
         if (this.state.charging) {
             this.state.power = Math.min(
                 this.config.GAMEPLAY.MAX_POWER,
                 this.state.power + deltaTime * 30
             );
+            // Update trajectory preview during charge to show power changes
+            this._updateTrajectoryPreview();
         }
 
         // Update turn timer
@@ -412,7 +453,12 @@ class BallerGame extends Engine {
 
         // Trigger AI turn if current player is AI
         if (this._isCurrentPlayerAI()) {
+            // Clear trajectory preview for AI turns
+            if (this.trajectoryPreview) this.trajectoryPreview.clear();
             this._scheduleAIAction();
+        } else {
+            // Show initial trajectory preview for human player
+            this._updateTrajectoryPreview();
         }
     }
 
@@ -607,6 +653,7 @@ class BallerGame extends Engine {
         this.cannons.forEach(c => c.dispose());
         this.terrain.dispose();
         this.particles.clear();
+        if (this.trajectoryPreview) this.trajectoryPreview.clear();
 
         // Reset state
         this.state.currentPlayer = 0;
@@ -646,6 +693,7 @@ class BallerGame extends Engine {
         this.cannons.forEach(c => c.dispose());
         if (this.terrain) this.terrain.dispose();
         if (this.particles) this.particles.dispose();
+        if (this.trajectoryPreview) this.trajectoryPreview.dispose();
 
         super.dispose();
     }
