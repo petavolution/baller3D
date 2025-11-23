@@ -60,15 +60,14 @@ class BallerGame extends Engine {
     _initSystems() {
         this.particles = new ParticleSystem(this.scene, this.config);
 
-        // Initialize AI controllers for AI players
+        // Initialize AI controllers using original Ballerburg personality system
+        // Strategy (cw) 1-5 and skill (cx) 1-5 from BALLER2.C
         this.playerTypes.forEach((type, i) => {
             if (type === 'ai') {
-                const personality = AIController.PERSONALITIES.BRUBBEL; // Default AI
-                this.aiControllers[i] = new AIController(this.config, {
-                    difficulty: personality.difficulty,
-                    personality: personality.personality
-                });
-                Debug.info(`AI Controller initialized for Player ${i + 1}`, personality);
+                // BRUBBEL: strategy=3 (balanced), skill=3 (medium accuracy)
+                this.aiControllers[i] = AIController.fromPersonality(this.config, 'BRUBBEL');
+                Debug.info(`AI Controller initialized for Player ${i + 1}`,
+                    AIController.STRATEGIES.BRUBBEL);
             }
         });
     }
@@ -440,7 +439,7 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Execute AI turn
+     * Execute AI turn using original Ballerburg targeting logic
      */
     _executeAITurn() {
         if (this.state.gameOver || this.projectile) return;
@@ -449,15 +448,14 @@ class BallerGame extends Engine {
         const cannon = this.cannons[this.state.currentPlayer];
         if (!ai || !cannon) return;
 
-        // Get potential targets (enemy castle and cannons)
-        const targets = this._getAITargets();
-        if (targets.length === 0) return;
+        // Build game state for AI (matches original z_* function requirements)
+        const gameState = this._getAIGameState();
 
-        // Calculate shot
+        // Calculate shot using original strategy selection
         const firePos = cannon.getFirePosition();
         const shot = ai.calculateShot(
             { x: firePos.x, y: firePos.y },
-            targets,
+            gameState,
             this.state.wind,
             this.config.PHYSICS.GRAVITY
         );
@@ -469,9 +467,13 @@ class BallerGame extends Engine {
 
         // Set cannon angle and fire
         cannon.setAim(shot.angle, cannon.horizontalAngle);
-        this.state.power = Math.min(shot.power * 2, this.config.GAMEPLAY.MAX_POWER);
+        this.state.power = Math.min(shot.power, this.config.GAMEPLAY.MAX_POWER);
 
-        Debug.debug('AI firing', { angle: shot.angle, power: this.state.power, target: shot.targetType });
+        Debug.debug('AI firing', {
+            target: shot.targetName,
+            angle: shot.angle.toFixed(1),
+            power: this.state.power.toFixed(1)
+        });
 
         // Fire after brief aiming animation
         setTimeout(() => {
@@ -482,44 +484,38 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Get targets for AI to aim at
+     * Build game state for AI targeting (mirrors original Ballerburg data structures)
+     * Provides data for z_kn, z_ka, z_ft, z_ge, z_pk target functions
      */
-    _getAITargets() {
-        const targets = [];
+    _getAIGameState() {
         const enemyIdx = (this.state.currentPlayer + 1) % 2;
         const enemyCastle = this.castles[enemyIdx];
-
-        if (enemyCastle && enemyCastle.alive) {
-            // Main castle as primary target
-            targets.push({
-                x: enemyCastle.position.x,
-                y: enemyCastle.position.y + 10,
-                type: 'castle',
-                priority: 10
-            });
-
-            // King position (top of castle)
-            targets.push({
-                x: enemyCastle.position.x,
-                y: enemyCastle.position.y + 20,
-                type: 'king',
-                priority: 15
-            });
-        }
-
-        // Enemy cannon as tactical target
         const enemyCannon = this.cannons[enemyIdx];
-        if (enemyCannon && enemyCannon.mesh) {
-            const cannonPos = enemyCannon.getFirePosition();
-            targets.push({
-                x: cannonPos.x,
-                y: cannonPos.y,
-                type: 'cannon',
-                priority: 8
-            });
-        }
 
-        return targets;
+        return {
+            // For z_kn() - king targeting
+            enemyCastle: enemyCastle && enemyCastle.alive ? {
+                position: enemyCastle.position,
+                alive: enemyCastle.alive
+            } : null,
+
+            // For z_ka() - cannon targeting
+            enemyCannons: enemyCannon && enemyCannon.mesh ? [{
+                x: enemyCannon.getFirePosition().x,
+                y: enemyCannon.getFirePosition().y,
+                alive: true
+            }] : [],
+
+            // For z_ft() - tower targeting (not implemented yet, but ready)
+            enemyTowers: [],
+
+            // For z_ge() - gold targeting (always has gold in simplified version)
+            enemyGold: 500,
+
+            // For z_pk() - powder/balls targeting
+            enemyPowder: 100,
+            enemyBalls: 10
+        };
     }
 
     /**

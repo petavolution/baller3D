@@ -1,13 +1,20 @@
 /**
  * Game Engine - AI Controller
- * Provides computer opponent logic using TrajectoryCalculator
+ * Precisely ported from original Ballerburg (1987) BALLER2.C by Eckhard Kruse
  *
- * Based on original Ballerburg (1987) AI strategies by Eckhard Kruse:
- * - Tölpel (Dimwit): Random shots
- * - Dummel (Dummy): Aims for king but misses
- * - Brubbel (Grumbler): Targets cannons
- * - Raffzahn (Greedy): Prioritizes gold/resources
- * - Tückisch (Sneaky): Mixed strategy
+ * Original AI strategies (cw values):
+ * - cw=1: Default king, 30% gold, 30% powder/balls
+ * - cw=2: Cannons primary, 90% also gold
+ * - cw=3: 50% cannons, 20% gold, 20% powder, 33% towers
+ * - cw=4: Only cannons
+ * - cw=5: Cannons, 90% towers
+ *
+ * Original targeting functions:
+ * - z_kn(): Target king
+ * - z_ka(): Target random enemy cannon
+ * - z_ft(): Target enemy tower
+ * - z_ge(): Target gold (if enemy >100)
+ * - z_pk(): Target powder or cannonballs
  */
 
 class AIController {
@@ -18,168 +25,267 @@ class AIController {
      */
     constructor(config, options = {}) {
         this.config = config;
-        this.difficulty = options.difficulty || 'normal'; // easy, normal, hard
-        this.personality = options.personality || 'balanced';
-        this.inaccuracy = this._getInaccuracy();
-        this.thinkDelay = options.thinkDelay || 1000; // ms before acting
+
+        // Original: cw[n] values 1-5, cx[n] skill 1-5
+        this.strategy = options.strategy || 3;  // Default: balanced (cw=3)
+        this.skillLevel = options.skillLevel || 3;  // 1-5, affects accuracy
+
+        // Calculate inaccuracy from skill (original: t=49-cx[n]*16)
+        // cx=1: t=33, cx=3: t=1, cx=5: t=-31 (very accurate)
+        this.accuracyRange = 49 - this.skillLevel * 16;
+
+        this.thinkDelay = options.thinkDelay || 1000;
     }
 
     /**
-     * Get inaccuracy based on difficulty
+     * AI Personalities matching original Ballerburg
+     * cw values determine targeting strategy
      */
-    _getInaccuracy() {
-        switch (this.difficulty) {
-            case 'easy': return 0.25;    // 25% deviation
-            case 'normal': return 0.12;  // 12% deviation
-            case 'hard': return 0.05;    // 5% deviation
-            default: return 0.12;
-        }
+    static get STRATEGIES() {
+        return {
+            // cw=1: King default, 30% gold, 30% powder
+            TOLPEL: { name: 'Tölpel', strategy: 1, skillLevel: 1, desc: 'Dimwit - random targeting' },
+
+            // cw=2: Cannons + 90% gold
+            DUMMEL: { name: 'Dummel', strategy: 2, skillLevel: 2, desc: 'Dummy - targets cannons and gold' },
+
+            // cw=3: Balanced - 50% cannons, 20% gold, 20% powder, 33% towers
+            BRUBBEL: { name: 'Brubbel', strategy: 3, skillLevel: 3, desc: 'Grumbler - balanced strategy' },
+
+            // cw=4: Only cannons
+            RAFFZAHN: { name: 'Raffzahn', strategy: 4, skillLevel: 4, desc: 'Greedy - cannon hunter' },
+
+            // cw=5: Cannons + 90% towers
+            TUCKISCH: { name: 'Tückisch', strategy: 5, skillLevel: 5, desc: 'Sneaky - targets infrastructure' }
+        };
     }
 
     /**
-     * Calculate AI shot for artillery game (Ballerburg-style)
-     * @param {Object} shooter - Shooter position and state {x, y, cannonAngle}
-     * @param {Array} targets - Array of potential targets [{x, y, priority, type}]
-     * @param {Object} wind - Wind state {strength, direction}
+     * Calculate shot using original Ballerburg targeting logic
+     * @param {Object} shooter - {x, y} cannon position
+     * @param {Object} gameState - Current game state with targets
+     * @param {Object} wind - {strength, direction}
      * @param {number} gravity - Gravity constant
-     * @returns {Object} Shot parameters {angle, power, targetType}
+     * @returns {Object} Shot parameters
      */
-    calculateShot(shooter, targets, wind, gravity) {
-        // Select target based on personality
-        const target = this._selectTarget(targets);
+    calculateShot(shooter, gameState, wind, gravity) {
+        // Select target using original strategy logic
+        const target = this._selectTargetByStrategy(gameState);
         if (!target) return null;
 
-        // Calculate trajectory to target
-        const source = { x: shooter.x, y: shooter.y };
-        const windValue = wind ? wind.strength * wind.direction : 0;
+        // Apply accuracy offset (original: -t/2+Random()%t)
+        const offset = this.accuracyRange > 0
+            ? -this.accuracyRange / 2 + Math.random() * this.accuracyRange
+            : Math.random() * 5 - 2.5; // High skill = small random offset
 
+        const adjustedTarget = {
+            x: target.x + offset,
+            y: target.y
+        };
+
+        // Calculate trajectory
+        const windValue = wind ? wind.strength * wind.direction : 0;
         const trajectory = TrajectoryCalculator.calculateTrajectory(
-            source,
-            { x: target.x, y: target.y },
+            { x: shooter.x, y: shooter.y },
+            adjustedTarget,
             gravity,
             windValue
         );
 
         if (!trajectory) return null;
 
-        // Apply inaccuracy for difficulty
-        const finalTrajectory = TrajectoryCalculator.addInaccuracy(
-            trajectory,
-            this.inaccuracy
-        );
-
         return {
-            angle: finalTrajectory.angle,
-            power: Math.min(finalTrajectory.power, this.config.GAMEPLAY?.MAX_POWER || 35),
-            vx: finalTrajectory.vx,
-            vy: finalTrajectory.vy,
-            targetType: target.type
+            angle: trajectory.angle,
+            power: Math.min(trajectory.power * 2, this.config.GAMEPLAY?.MAX_POWER || 35),
+            vx: trajectory.vx,
+            vy: trajectory.vy,
+            targetType: target.type,
+            targetName: target.name || target.type
         };
     }
 
     /**
-     * Select target based on AI personality
-     * @param {Array} targets - Potential targets with priorities
-     * @returns {Object|null} Selected target
+     * Select target using original Ballerburg strategy switch
+     * Precisely matches comp() function strategy selection
      */
-    _selectTarget(targets) {
-        if (!targets || targets.length === 0) return null;
+    _selectTargetByStrategy(gameState) {
+        const t = Math.floor(Math.random() * 100); // Original: t=Random()%100
 
-        // Filter valid targets
-        const validTargets = targets.filter(t => t && t.x !== undefined && t.y !== undefined);
-        if (validTargets.length === 0) return null;
+        // Default: target king (z_kn) - always called first if cw[n] > 0
+        let target = this._z_kn(gameState);
 
-        switch (this.personality) {
-            case 'aggressive':
-                // Prioritize king/main target
-                return this._selectByType(validTargets, ['king', 'castle', 'worm']) ||
-                       this._selectRandom(validTargets);
+        switch (this.strategy) {
+            case 1:
+                // Original: if( t<30 ) z_ge(); if( t>60 ) z_pk();
+                if (t < 30) {
+                    target = this._z_ge(gameState) || target;
+                }
+                if (t > 60) {
+                    target = this._z_pk(gameState) || target;
+                }
+                break;
 
-            case 'tactical':
-                // Prioritize cannons/weapons
-                return this._selectByType(validTargets, ['cannon', 'weapon', 'worm']) ||
-                       this._selectRandom(validTargets);
+            case 2:
+                // Original: z_ka(); if( t<90 ) z_ge();
+                target = this._z_ka(gameState) || target;
+                if (t < 90) {
+                    target = this._z_ge(gameState) || target;
+                }
+                break;
 
-            case 'economic':
-                // Prioritize resources
-                return this._selectByType(validTargets, ['gold', 'resources', 'tower']) ||
-                       this._selectRandom(validTargets);
+            case 3:
+                // Original: if( t<50 )z_ka(); else if( t<70 )z_ge(); else if( t<90 )z_pk();
+                //           if( !(Random()%3) ) z_ft();
+                if (t < 50) {
+                    target = this._z_ka(gameState) || target;
+                } else if (t < 70) {
+                    target = this._z_ge(gameState) || target;
+                } else if (t < 90) {
+                    target = this._z_pk(gameState) || target;
+                }
+                // 33% chance to target tower instead
+                if (Math.floor(Math.random() * 3) === 0) {
+                    target = this._z_ft(gameState) || target;
+                }
+                break;
 
-            case 'random':
-                return this._selectRandom(validTargets);
+            case 4:
+                // Original: z_ka();
+                target = this._z_ka(gameState) || target;
+                break;
 
-            case 'balanced':
-            default:
-                // Use priority weights
-                return this._selectByPriority(validTargets);
+            case 5:
+                // Original: z_ka(); if( t<90 ) z_ft();
+                target = this._z_ka(gameState) || target;
+                if (t < 90) {
+                    target = this._z_ft(gameState) || target;
+                }
+                break;
         }
+
+        return target;
     }
 
     /**
-     * Select target by type preference
+     * z_kn() - Target king (throne room)
+     * Original: zx=!n*639-f*(bh[21]+15); zy=by[!n]-bh[22]-5;
      */
-    _selectByType(targets, preferredTypes) {
-        for (const type of preferredTypes) {
-            const match = targets.find(t => t.type === type);
-            if (match) return match;
-        }
-        return null;
+    _z_kn(gameState) {
+        const castle = gameState.enemyCastle;
+        if (!castle || !castle.alive) return null;
+
+        return {
+            x: castle.position.x,
+            y: castle.position.y + 20, // King is at top of castle
+            type: 'king',
+            name: 'König',
+            priority: 15
+        };
     }
 
     /**
-     * Select target by priority score
+     * z_ka() - Target random enemy cannon
+     * Original: do i=Random()%10; while( ka[!n][i].x==-1 );
+     *           zx=ka[!n][i].x+10; zy=ka[!n][i].y;
      */
-    _selectByPriority(targets) {
-        // Sort by priority (higher is better)
-        const sorted = [...targets].sort((a, b) =>
-            (b.priority || 0) - (a.priority || 0)
-        );
+    _z_ka(gameState) {
+        const cannons = gameState.enemyCannons?.filter(c => c && c.alive !== false);
+        if (!cannons || cannons.length === 0) return null;
 
-        // Add some randomness - 70% chance for top target, 30% for others
-        if (sorted.length > 1 && Math.random() > 0.7) {
-            return sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-        }
-        return sorted[0];
+        // Select random cannon (original picks random valid cannon)
+        const cannon = cannons[Math.floor(Math.random() * cannons.length)];
+        return {
+            x: cannon.x + 10,
+            y: cannon.y,
+            type: 'cannon',
+            name: 'Kanone',
+            priority: 10
+        };
     }
 
     /**
-     * Select random target
+     * z_ft() - Target enemy tower (Förderturm)
+     * Original: zx=ft[!n][i].x-15*f; zy=ft[!n][i].y-10;
      */
-    _selectRandom(targets) {
-        return targets[Math.floor(Math.random() * targets.length)];
+    _z_ft(gameState) {
+        const towers = gameState.enemyTowers?.filter(t => t && t.alive !== false);
+        if (!towers || towers.length === 0) return null;
+
+        const tower = towers[Math.floor(Math.random() * towers.length)];
+        return {
+            x: tower.x,
+            y: tower.y - 10,
+            type: 'tower',
+            name: 'Förderturm',
+            priority: 8
+        };
     }
 
     /**
-     * Get AI action delay (thinking time)
+     * z_ge() - Target gold storage
+     * Original: if( ge[!n]>100 ) { zx=!n*639-f*(bh[25]+bh[31]/2); zy=by[!n]-bh[26]; }
+     */
+    _z_ge(gameState) {
+        // Only target gold if enemy has significant amount (>100 in original)
+        if (!gameState.enemyGold || gameState.enemyGold <= 100) return null;
+
+        const castle = gameState.enemyCastle;
+        if (!castle) return null;
+
+        return {
+            x: castle.position.x + (castle.position.x > 0 ? -8 : 8),
+            y: castle.position.y + 5,
+            type: 'gold',
+            name: 'Goldlager',
+            priority: 7
+        };
+    }
+
+    /**
+     * z_pk() - Target powder or cannonballs storage
+     * Original: if( ku[!n] || pu[!n]>19 ) { i=Random()&2; ... }
+     */
+    _z_pk(gameState) {
+        // Only target if enemy has powder (>19) or cannonballs
+        const hasPowder = gameState.enemyPowder && gameState.enemyPowder > 19;
+        const hasBalls = gameState.enemyBalls && gameState.enemyBalls > 0;
+
+        if (!hasPowder && !hasBalls) return null;
+
+        const castle = gameState.enemyCastle;
+        if (!castle) return null;
+
+        // Original randomly picks powder or balls (i=Random()&2)
+        const targetPowder = Math.random() > 0.5;
+
+        return {
+            x: castle.position.x + (castle.position.x > 0 ? -12 : 12),
+            y: castle.position.y + 8,
+            type: targetPowder ? 'powder' : 'balls',
+            name: targetPowder ? 'Pulverlager' : 'Kugellager',
+            priority: 6
+        };
+    }
+
+    /**
+     * Get AI thinking delay
      */
     getThinkDelay() {
-        // Add some variation to seem more human
         return this.thinkDelay + Math.random() * 500;
     }
 
     /**
-     * Decide cannon angle adjustments
-     * @param {number} currentAngle - Current cannon angle
-     * @param {number} targetAngle - Desired angle
-     * @returns {number} Angle change step
+     * Create AI from personality preset
      */
-    getAngleAdjustment(currentAngle, targetAngle) {
-        const diff = targetAngle - currentAngle;
-        const step = 2 + Math.random(); // 2-3 degrees per adjustment
-        return Math.sign(diff) * Math.min(Math.abs(diff), step);
-    }
-
-    /**
-     * AI personalities available (based on original Ballerburg)
-     */
-    static get PERSONALITIES() {
-        return {
-            TOLPEL: { name: 'Tölpel', difficulty: 'easy', personality: 'random' },
-            DUMMEL: { name: 'Dummel', difficulty: 'easy', personality: 'aggressive' },
-            BRUBBEL: { name: 'Brubbel', difficulty: 'normal', personality: 'tactical' },
-            RAFFZAHN: { name: 'Raffzahn', difficulty: 'normal', personality: 'economic' },
-            TUCKISCH: { name: 'Tückisch', difficulty: 'hard', personality: 'balanced' }
-        };
+    static fromPersonality(config, personalityName) {
+        const preset = AIController.STRATEGIES[personalityName.toUpperCase()];
+        if (!preset) {
+            return new AIController(config);
+        }
+        return new AIController(config, {
+            strategy: preset.strategy,
+            skillLevel: preset.skillLevel
+        });
     }
 }
 
