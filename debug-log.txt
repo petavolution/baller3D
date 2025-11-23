@@ -1,7 +1,7 @@
 ============================================================
 BALLERBURG 3D - TEST RESULTS
 ============================================================
-Started: 2025-11-22T23:57:03.018Z
+Started: 2025-11-23T00:07:30.862Z
 
   ✓ PASS: Config object exists
   ✓ PASS: Config.TERRAIN_WIDTH is valid
@@ -50,14 +50,20 @@ Started: 2025-11-22T23:57:03.018Z
   ✓ PASS: TrajectoryPreview applies gravity to trajectory
   ✓ PASS: TrajectoryPreview applies wind
   ✓ PASS: TrajectoryPreview.clear removes all points
+  ✓ PASS: TrajectoryCalculator calculates basic trajectory
+  ✓ PASS: TrajectoryCalculator handles left target
+  ✓ PASS: TrajectoryCalculator adjusts for height difference
+  ✓ PASS: TrajectoryCalculator compensates for wind
+  ✓ PASS: TrajectoryCalculator.addInaccuracy modifies trajectory
+  ✓ PASS: TrajectoryCalculator.addInaccuracy handles null
 
 ============================================================
 SUMMARY
 ============================================================
-Total:  47
-Passed: 47
+Total:  53
+Passed: 53
 Failed: 0
-Duration: 49ms
+Duration: 52ms
 ============================================================
 ALL TESTS PASSED
 
