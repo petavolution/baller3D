@@ -1,42 +1,23 @@
 /**
  * Ballerburg 3D - Main Game Controller
- * Extends Engine with game-specific logic
+ * Extends BaseGameController with Ballerburg-specific logic
  */
 
-class BallerGame extends Engine {
+class BallerGame extends BaseGameController {
     constructor() {
         super(BallerConfig);
         Debug.info('BallerGame: Creating...');
 
-        // Game entities
-        this.terrain = null;
+        // Game entities (Ballerburg-specific)
         this.castles = [];
         this.cannons = [];
-        this.projectile = null;
 
-        // Systems
-        this.particles = null;
-        this.trajectoryPreview = null;
-
-        // Game state
-        this.state = {
-            currentPlayer: 0,
-            turnTimer: this.config.TURNS.TIME_LIMIT,
-            gameOver: false,
-            charging: false,
-            power: 0,
-            currentWeapon: 0,
-            wind: { strength: 0, direction: 1 },
-            ammo: []
-        };
+        // Ballerburg-specific state
+        this.state.currentPlayer = 0;
 
         // AI support - player types: 'human' or 'ai'
         this.playerTypes = ['human', 'ai']; // Player 1 human, Player 2 AI by default
         this.aiControllers = [null, null];
-
-        // Turn management
-        this._pendingTurnTimeout = null;
-        this._aiActionTimeout = null;
     }
 
     /**
@@ -44,22 +25,15 @@ class BallerGame extends Engine {
      */
     init() {
         super.init();
-
-        this._initSystems();
-        this._initWorld();
-        this._initControls();
-        this._randomizeWind();
-        this._initAmmo();
-
         Debug.info('BallerGame: Initialized');
         return this;
     }
 
     /**
-     * Initialize game systems
+     * Initialize game systems (override)
      */
     _initSystems() {
-        this.particles = new ParticleSystem(this.scene, this.config);
+        super._initSystems();
 
         // Trajectory preview for aiming visualization
         this.trajectoryPreview = new TrajectoryPreview(this.scene, this.config, {
@@ -82,7 +56,7 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Initialize game world
+     * Initialize game world (override)
      */
     _initWorld() {
         // Create terrain using BallerTerrain
@@ -90,7 +64,7 @@ class BallerGame extends Engine {
         this.terrain.generate();
 
         // Create water plane
-        this._createWater();
+        this._createWater(-8, 0.7);
 
         // Create castles and cannons
         for (let i = 0; i < this.config.GAMEPLAY.PLAYER_COUNT; i++) {
@@ -108,27 +82,7 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Create water plane
-     */
-    _createWater() {
-        const geometry = new THREE.PlaneGeometry(
-            this.config.TERRAIN.WIDTH * 2,
-            this.config.TERRAIN.DEPTH * 2
-        );
-        const material = new THREE.MeshPhongMaterial({
-            color: this.config.COLORS.WATER,
-            transparent: true,
-            opacity: 0.7,
-            shininess: 100
-        });
-        const water = new THREE.Mesh(geometry, material);
-        water.rotation.x = -Math.PI / 2;
-        water.position.y = -8;
-        this.scene.add(water);
-    }
-
-    /**
-     * Initialize controls
+     * Initialize controls (override)
      */
     _initControls() {
         // Keyboard
@@ -160,42 +114,6 @@ class BallerGame extends Engine {
 
         // Window resize
         window.addEventListener('resize', () => this._onResize());
-    }
-
-    /**
-     * Select weapon by index
-     */
-    _selectWeapon(idx) {
-        if (idx < 0 || idx >= this.config.WEAPONS.length) return;
-        if (this.state.ammo[idx] === 0) return; // Out of ammo
-
-        this.state.currentWeapon = idx;
-
-        // Update button styles
-        document.querySelectorAll('.weapon-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', i === idx);
-            btn.classList.toggle('disabled', this.state.ammo[i] === 0);
-        });
-
-        Debug.debug('Weapon selected', { weapon: this.config.WEAPONS[idx].name });
-    }
-
-    /**
-     * Initialize ammo from config
-     */
-    _initAmmo() {
-        this.state.ammo = this.config.WEAPONS.map(w => w.ammo);
-    }
-
-    /**
-     * Randomize wind
-     */
-    _randomizeWind() {
-        this.state.wind = {
-            strength: Math.random() * this.config.PHYSICS.WIND_MAX,
-            direction: Math.random() > 0.5 ? 1 : -1
-        };
-        this._updateUI();
     }
 
     /**
@@ -245,15 +163,6 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Start charging power
-     */
-    _startCharge() {
-        if (this.state.gameOver || this.projectile) return;
-        this.state.charging = true;
-        this.state.power = 0;
-    }
-
-    /**
      * Update trajectory preview based on current aim
      */
     _updateTrajectoryPreview() {
@@ -275,35 +184,18 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Fire projectile
+     * Fire projectile (override)
      */
     _fire() {
-        if (!this.state.charging || this.projectile) return;
-        this.state.charging = false;
-
-        // Clear trajectory preview when firing
-        if (this.trajectoryPreview) {
-            this.trajectoryPreview.clear();
-        }
+        const fireData = this._getFireData();
+        if (!fireData) return;
 
         const cannon = this.cannons[this.state.currentPlayer];
-        const weapon = this.config.WEAPONS[this.state.currentWeapon];
-        const power = Math.max(10, this.state.power);
-
-        // Check ammo
-        if (this.state.ammo[this.state.currentWeapon] === 0) {
-            Debug.warn('Out of ammo');
-            return;
-        }
-        if (this.state.ammo[this.state.currentWeapon] > 0) {
-            this.state.ammo[this.state.currentWeapon]--;
-        }
 
         // Create projectile
         const position = cannon.getFirePosition();
         const direction = cannon.getFireDirection();
-        const speed = power * weapon.speed;
-        const velocity = direction.multiplyScalar(speed);
+        const velocity = direction.multiplyScalar(fireData.speed);
 
         this.projectile = new BaseProjectile(
             this.scene,
@@ -311,7 +203,7 @@ class BallerGame extends Engine {
             velocity,
             this.config
         );
-        this.projectile.weapon = weapon;
+        this.projectile.weapon = fireData.weapon;
 
         // Track projectile with camera
         this.setCameraTarget(
@@ -319,18 +211,18 @@ class BallerGame extends Engine {
             position
         );
 
-        Debug.debug('Fired', { power, weapon: weapon.name });
+        Debug.debug('Fired', { power: fireData.power, weapon: fireData.weapon.name });
     }
 
     /**
-     * Update game logic
+     * Update game logic (override)
      */
     update(deltaTime) {
         // Update charging and trajectory preview
         if (this.state.charging) {
             this.state.power = Math.min(
                 this.config.GAMEPLAY.MAX_POWER,
-                this.state.power + deltaTime * 30
+                this.state.power + deltaTime * this._getChargeRate()
             );
             // Update trajectory preview during charge to show power changes
             this._updateTrajectoryPreview();
@@ -378,76 +270,37 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Handle projectile impact
+     * Apply damage to entities (override)
      */
-    _onProjectileHit() {
-        if (!this.projectile) return;
+    _applyDamageToEntities(position, weapon) {
+        this.castles.forEach((castle, i) => {
+            if (!castle.alive) return;
 
-        const pos = this.projectile.position;
-        const weapon = this.projectile.weapon;
+            const dist = position.distanceTo(castle.position);
+            if (dist < weapon.radius + 5) {
+                const dmgFactor = 1 - (dist / (weapon.radius + 5));
+                const damage = weapon.damage * dmgFactor;
+                castle.takeDamage(damage, position);
 
-        // Create explosion
-        if (!this.projectile.outOfBounds) {
-            this.particles.createExplosion(pos, {
-                radius: weapon.radius,
-                count: 60
-            });
+                // Show damage number
+                this.particles.createFloatingText(castle.position.clone(), damage, {
+                    color: this.config.PLAYERS[i].roof
+                });
 
-            // Damage terrain
-            this.terrain.damage(pos, weapon.radius);
-
-            // Check castle damage
-            this.castles.forEach((castle, i) => {
-                if (!castle.alive) return;
-
-                const dist = pos.distanceTo(castle.position);
-                if (dist < weapon.radius + 5) {
-                    const dmgFactor = 1 - (dist / (weapon.radius + 5));
-                    const damage = weapon.damage * dmgFactor;
-                    castle.takeDamage(damage, pos);
-
-                    // Show damage number
-                    this.particles.createFloatingText(castle.position.clone(), damage, {
-                        color: this.config.PLAYERS[i].roof
-                    });
-
-                    if (!castle.alive) {
-                        this._checkVictory();
-                    }
+                if (!castle.alive) {
+                    this._checkVictory();
                 }
-            });
-        }
-
-        // Clean up
-        this.projectile.dispose();
-        this.projectile = null;
-
-        // Return camera
-        this.resetCamera();
-
-        // Schedule next turn
-        this._pendingTurnTimeout = setTimeout(
-            () => this._nextTurn(),
-            this.config.TURNS.DELAY_AFTER_IMPACT
-        );
+            }
+        });
     }
 
     /**
-     * Switch to next player
+     * Switch to next player (override)
      */
     _nextTurn() {
-        if (this._pendingTurnTimeout) {
-            clearTimeout(this._pendingTurnTimeout);
-            this._pendingTurnTimeout = null;
-        }
-        if (this._aiActionTimeout) {
-            clearTimeout(this._aiActionTimeout);
-            this._aiActionTimeout = null;
-        }
+        this._prepareNextTurn();
 
         this.state.currentPlayer = (this.state.currentPlayer + 1) % this.config.GAMEPLAY.PLAYER_COUNT;
-        this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
-        this._randomizeWind();
 
         Debug.info(`Turn: Player ${this.state.currentPlayer + 1}`);
 
@@ -522,6 +375,7 @@ class BallerGame extends Engine {
         });
 
         // Fire after brief aiming animation
+        this.state.charging = true;
         setTimeout(() => {
             if (!this.state.gameOver && !this.projectile) {
                 this._fire();
@@ -565,7 +419,7 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Check for victory condition
+     * Check for victory condition (override)
      */
     _checkVictory() {
         const alive = this.castles.filter(c => c.alive);
@@ -580,20 +434,7 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Show victory screen
-     */
-    _showVictory(winner) {
-        const modal = document.getElementById('victoryModal');
-        const text = document.getElementById('victoryText');
-        if (modal && text) {
-            text.textContent = winner > 0 ?
-                `Player ${winner} Wins!` : 'Draw!';
-            modal.classList.remove('hidden');
-        }
-    }
-
-    /**
-     * Update UI elements
+     * Update UI elements (override)
      */
     _updateUI() {
         const cannon = this.cannons[this.state.currentPlayer];
@@ -609,16 +450,7 @@ class BallerGame extends Engine {
             'powerValue': Math.round(this.state.power)
         };
 
-        for (const [id, value] of Object.entries(elements)) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        }
-
-        // Update power bar
-        const powerBar = document.getElementById('powerBar');
-        if (powerBar) {
-            powerBar.style.width = `${(this.state.power / this.config.GAMEPLAY.MAX_POWER) * 100}%`;
-        }
+        this._updateUIElements(elements);
 
         // Update health bars
         this.castles.forEach((castle, i) => {
@@ -630,37 +462,18 @@ class BallerGame extends Engine {
     }
 
     /**
-     * Restart game
+     * Restart game (override)
      */
     restart() {
-        // Clear pending timeouts
-        if (this._pendingTurnTimeout) {
-            clearTimeout(this._pendingTurnTimeout);
-            this._pendingTurnTimeout = null;
-        }
-        if (this._aiActionTimeout) {
-            clearTimeout(this._aiActionTimeout);
-            this._aiActionTimeout = null;
-        }
+        this._baseRestart();
 
-        // Dispose entities
-        if (this.projectile) {
-            this.projectile.dispose();
-            this.projectile = null;
-        }
-
+        // Dispose Ballerburg-specific entities
         this.castles.forEach(c => c.dispose());
         this.cannons.forEach(c => c.dispose());
         this.terrain.dispose();
-        this.particles.clear();
-        if (this.trajectoryPreview) this.trajectoryPreview.clear();
 
         // Reset state
         this.state.currentPlayer = 0;
-        this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
-        this.state.gameOver = false;
-        this.state.charging = false;
-        this.state.power = 0;
 
         // Rebuild world
         this.castles = [];
@@ -670,31 +483,15 @@ class BallerGame extends Engine {
         this._randomizeWind();
         this.resetCamera();
 
-        // Hide victory modal
-        const modal = document.getElementById('victoryModal');
-        if (modal) modal.classList.add('hidden');
-
         Debug.info('Game restarted');
     }
 
     /**
-     * Clean up
+     * Clean up (override)
      */
     dispose() {
-        if (this._pendingTurnTimeout) {
-            clearTimeout(this._pendingTurnTimeout);
-        }
-        if (this._aiActionTimeout) {
-            clearTimeout(this._aiActionTimeout);
-        }
-
-        if (this.projectile) this.projectile.dispose();
         this.castles.forEach(c => c.dispose());
         this.cannons.forEach(c => c.dispose());
-        if (this.terrain) this.terrain.dispose();
-        if (this.particles) this.particles.dispose();
-        if (this.trajectoryPreview) this.trajectoryPreview.dispose();
-
         super.dispose();
     }
 }

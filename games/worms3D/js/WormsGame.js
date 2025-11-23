@@ -1,36 +1,21 @@
 /**
  * Worms 3D - Main Game Controller
- * Extends Engine with worms-specific gameplay
+ * Extends BaseGameController with worms-specific gameplay
  */
 
-class WormsGame extends Engine {
+class WormsGame extends BaseGameController {
     constructor() {
         super(WormsConfig);
         Debug.info('WormsGame: Creating...');
 
-        // Game entities
-        this.terrain = null;
+        // Game entities (Worms-specific)
         this.teams = []; // Array of arrays of worms
-        this.projectile = null;
 
-        // Systems
-        this.particles = null;
+        // Worms-specific state
+        this.state.currentTeam = 0;
+        this.state.currentWorm = 0;
+        this.state.phase = 'move'; // 'move', 'aim', 'fire', 'wait'
 
-        // Game state
-        this.state = {
-            currentTeam: 0,
-            currentWorm: 0,
-            turnTimer: this.config.TURNS.TIME_LIMIT,
-            gameOver: false,
-            charging: false,
-            power: 0,
-            currentWeapon: 0,
-            wind: { strength: 0, direction: 1 },
-            ammo: [],
-            phase: 'move' // 'move', 'aim', 'fire', 'wait'
-        };
-
-        this._pendingTurnTimeout = null;
         this._keysDown = {};
     }
 
@@ -39,27 +24,13 @@ class WormsGame extends Engine {
      */
     init() {
         super.init();
-
-        this._initSystems();
-        this._initWorld();
-        this._initControls();
-        this._initAmmo();
-        this._randomizeWind();
         this._updateSelectionIndicators();
-
         Debug.info('WormsGame: Initialized');
         return this;
     }
 
     /**
-     * Initialize systems
-     */
-    _initSystems() {
-        this.particles = new ParticleSystem(this.scene, this.config);
-    }
-
-    /**
-     * Initialize game world
+     * Initialize game world (override)
      */
     _initWorld() {
         // Create terrain
@@ -67,7 +38,7 @@ class WormsGame extends Engine {
         this.terrain.generate();
 
         // Create water
-        this._createWater();
+        this._createWater(-6, 0.8);
 
         // Spawn worms for each team
         const totalWorms = this.config.GAMEPLAY.TEAM_COUNT * this.config.GAMEPLAY.WORMS_PER_TEAM;
@@ -92,27 +63,7 @@ class WormsGame extends Engine {
     }
 
     /**
-     * Create water plane
-     */
-    _createWater() {
-        const geometry = new THREE.PlaneGeometry(
-            this.config.TERRAIN.WIDTH * 2,
-            this.config.TERRAIN.DEPTH * 2
-        );
-        const material = new THREE.MeshPhongMaterial({
-            color: this.config.COLORS.WATER,
-            transparent: true,
-            opacity: 0.8,
-            shininess: 100
-        });
-        const water = new THREE.Mesh(geometry, material);
-        water.rotation.x = -Math.PI / 2;
-        water.position.y = -6;
-        this.scene.add(water);
-    }
-
-    /**
-     * Initialize controls
+     * Initialize controls (override)
      */
     _initControls() {
         window.addEventListener('keydown', e => this._onKeyDown(e));
@@ -134,24 +85,6 @@ class WormsGame extends Engine {
                 this._selectWeapon(idx);
             });
         });
-    }
-
-    /**
-     * Initialize ammo
-     */
-    _initAmmo() {
-        this.state.ammo = this.config.WEAPONS.map(w => w.ammo);
-    }
-
-    /**
-     * Randomize wind
-     */
-    _randomizeWind() {
-        this.state.wind = {
-            strength: Math.random() * this.config.PHYSICS.WIND_MAX,
-            direction: Math.random() > 0.5 ? 1 : -1
-        };
-        this._updateUI();
     }
 
     /**
@@ -253,48 +186,24 @@ class WormsGame extends Engine {
     }
 
     /**
-     * Select weapon
-     */
-    _selectWeapon(idx) {
-        if (idx < 0 || idx >= this.config.WEAPONS.length) return;
-        if (this.state.ammo[idx] === 0) return;
-
-        this.state.currentWeapon = idx;
-
-        document.querySelectorAll('.weapon-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', i === idx);
-            btn.classList.toggle('disabled', this.state.ammo[i] === 0);
-        });
-    }
-
-    /**
-     * Start charging
+     * Start charging (override with phase check)
      */
     _startCharge() {
-        if (this.state.gameOver || this.projectile || this.state.phase !== 'aim') return;
-        this.state.charging = true;
-        this.state.power = 0;
+        if (this.state.phase !== 'aim') return;
+        super._startCharge();
     }
 
     /**
-     * Fire projectile
+     * Fire projectile (override)
      */
     _fire() {
-        if (!this.state.charging || this.projectile) return;
-        this.state.charging = false;
+        const fireData = this._getFireData();
+        if (!fireData) return;
+
         this.state.phase = 'wait';
 
         const worm = this.getCurrentWorm();
         if (!worm) return;
-
-        const weapon = this.config.WEAPONS[this.state.currentWeapon];
-        const power = Math.max(10, this.state.power);
-
-        // Check ammo
-        if (this.state.ammo[this.state.currentWeapon] === 0) return;
-        if (this.state.ammo[this.state.currentWeapon] > 0) {
-            this.state.ammo[this.state.currentWeapon]--;
-        }
 
         // Battle cry speech bubble
         const battleCries = ['Fire!', 'Incoming!', 'Take this!', 'Eat this!'];
@@ -303,21 +212,20 @@ class WormsGame extends Engine {
 
         const position = worm.getFirePosition();
         const direction = worm.getFireDirection();
-        const speed = power * weapon.speed;
-        const velocity = direction.multiplyScalar(speed);
+        const velocity = direction.multiplyScalar(fireData.speed);
 
         // Create projectile based on type
-        if (weapon.type === 'bouncing') {
+        if (fireData.weapon.type === 'bouncing') {
             this.projectile = new BouncingProjectile(
                 this.scene, position, velocity, this.config,
-                { timer: weapon.timer, maxBounces: 3 }
+                { timer: fireData.weapon.timer, maxBounces: 3 }
             );
         } else {
             this.projectile = new BaseProjectile(
                 this.scene, position, velocity, this.config
             );
         }
-        this.projectile.weapon = weapon;
+        this.projectile.weapon = fireData.weapon;
 
         // Track with camera
         this.setCameraTarget(
@@ -325,18 +233,25 @@ class WormsGame extends Engine {
             position
         );
 
-        Debug.debug('Fired', { power, weapon: weapon.name });
+        Debug.debug('Fired', { power: fireData.power, weapon: fireData.weapon.name });
     }
 
     /**
-     * Update game logic
+     * Get charge rate (override - slightly faster for Worms)
+     */
+    _getChargeRate() {
+        return 35;
+    }
+
+    /**
+     * Update game logic (override)
      */
     update(deltaTime) {
         // Update charging
         if (this.state.charging) {
             this.state.power = Math.min(
                 this.config.GAMEPLAY.MAX_POWER,
-                this.state.power + deltaTime * 35
+                this.state.power + deltaTime * this._getChargeRate()
             );
         }
 
@@ -400,63 +315,40 @@ class WormsGame extends Engine {
     }
 
     /**
-     * Handle projectile impact
+     * Apply damage to entities (override)
      */
-    _onProjectileHit() {
-        if (!this.projectile) return;
+    _applyDamageToEntities(position, weapon) {
+        this.teams.forEach(team => {
+            team.forEach(worm => {
+                if (!worm.alive) return;
 
-        const pos = this.projectile.position;
-        const weapon = this.projectile.weapon;
+                const dist = position.distanceTo(worm.position);
+                if (dist < weapon.radius + 2) {
+                    const dmgFactor = 1 - (dist / (weapon.radius + 2));
+                    const damage = weapon.damage * dmgFactor;
+                    worm.takeDamage(damage);
 
-        if (!this.projectile.outOfBounds) {
-            // Explosion
-            this.particles.createExplosion(pos, { radius: weapon.radius, count: 50 });
+                    this.particles.createFloatingText(
+                        worm.position.clone(),
+                        damage,
+                        { color: this.config.TEAMS[worm.teamIndex].color }
+                    );
 
-            // Damage terrain
-            this.terrain.damage(pos, weapon.radius);
-
-            // Damage worms
-            this.teams.forEach(team => {
-                team.forEach(worm => {
-                    if (!worm.alive) return;
-
-                    const dist = pos.distanceTo(worm.position);
-                    if (dist < weapon.radius + 2) {
-                        const dmgFactor = 1 - (dist / (weapon.radius + 2));
-                        const damage = weapon.damage * dmgFactor;
-                        worm.takeDamage(damage);
-
-                        this.particles.createFloatingText(
-                            worm.position.clone(),
-                            damage,
-                            { color: this.config.TEAMS[worm.teamIndex].color }
-                        );
-
-                        // Knockback
-                        const knockDir = worm.position.clone().sub(pos).normalize();
-                        worm.velocity.add(knockDir.multiplyScalar(dmgFactor * 15));
-                    }
-                });
+                    // Knockback
+                    const knockDir = worm.position.clone().sub(position).normalize();
+                    worm.velocity.add(knockDir.multiplyScalar(dmgFactor * 15));
+                }
             });
+        });
 
-            this._checkVictory();
-        }
-
-        this.projectile.dispose();
-        this.projectile = null;
-        this.resetCamera();
-
-        this._pendingTurnTimeout = setTimeout(() => this._nextTurn(), this.config.TURNS.DELAY_AFTER_IMPACT);
+        this._checkVictory();
     }
 
     /**
-     * Next turn
+     * Next turn (override)
      */
     _nextTurn() {
-        if (this._pendingTurnTimeout) {
-            clearTimeout(this._pendingTurnTimeout);
-            this._pendingTurnTimeout = null;
-        }
+        this._prepareNextTurn();
 
         // Move to next team
         this.state.currentTeam = (this.state.currentTeam + 1) % this.config.GAMEPLAY.TEAM_COUNT;
@@ -482,9 +374,7 @@ class WormsGame extends Engine {
             }
         }
 
-        this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
         this.state.phase = 'move';
-        this._randomizeWind();
 
         // Update selection indicators
         this._updateSelectionIndicators();
@@ -502,7 +392,7 @@ class WormsGame extends Engine {
     }
 
     /**
-     * Check victory
+     * Check victory (override)
      */
     _checkVictory() {
         const aliveTeams = this.teams.filter(team =>
@@ -515,25 +405,16 @@ class WormsGame extends Engine {
                 this.teams.indexOf(aliveTeams[0]) : -1;
 
             Debug.info('Game Over', { winner: winnerIdx + 1 });
-            this._showVictory(winnerIdx);
-        }
-    }
 
-    /**
-     * Show victory
-     */
-    _showVictory(winnerIdx) {
-        const modal = document.getElementById('victoryModal');
-        const text = document.getElementById('victoryText');
-        if (modal && text) {
-            text.textContent = winnerIdx >= 0 ?
+            // Custom victory message with team name
+            const msg = winnerIdx >= 0 ?
                 `${this.config.TEAMS[winnerIdx].name} Wins!` : 'Draw!';
-            modal.classList.remove('hidden');
+            this._showVictory(winnerIdx + 1, msg);
         }
     }
 
     /**
-     * Update UI
+     * Update UI (override)
      */
     _updateUI() {
         const worm = this.getCurrentWorm();
@@ -547,59 +428,40 @@ class WormsGame extends Engine {
             'powerValue': Math.round(this.state.power)
         };
 
-        for (const [id, value] of Object.entries(elements)) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        }
-
-        const powerBar = document.getElementById('powerBar');
-        if (powerBar) {
-            powerBar.style.width = `${(this.state.power / this.config.GAMEPLAY.MAX_POWER) * 100}%`;
-        }
+        this._updateUIElements(elements);
     }
 
     /**
-     * Restart
+     * Restart (override)
      */
     restart() {
-        if (this._pendingTurnTimeout) {
-            clearTimeout(this._pendingTurnTimeout);
-            this._pendingTurnTimeout = null;
-        }
+        this._baseRestart();
 
-        if (this.projectile) {
-            this.projectile.dispose();
-            this.projectile = null;
-        }
-
+        // Dispose Worms-specific entities
         this.teams.forEach(team => team.forEach(w => w.dispose()));
         this.terrain.dispose();
-        this.particles.clear();
 
+        // Reset state
         this.teams = [];
         this.state.currentTeam = 0;
         this.state.currentWorm = 0;
-        this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
-        this.state.gameOver = false;
         this.state.phase = 'move';
 
+        // Rebuild world
         this._initWorld();
         this._initAmmo();
         this._randomizeWind();
         this.resetCamera();
-
-        const modal = document.getElementById('victoryModal');
-        if (modal) modal.classList.add('hidden');
+        this._updateSelectionIndicators();
 
         Debug.info('Game restarted');
     }
 
+    /**
+     * Dispose (override)
+     */
     dispose() {
-        if (this._pendingTurnTimeout) clearTimeout(this._pendingTurnTimeout);
-        if (this.projectile) this.projectile.dispose();
         this.teams.forEach(team => team.forEach(w => w.dispose()));
-        if (this.terrain) this.terrain.dispose();
-        if (this.particles) this.particles.dispose();
         super.dispose();
     }
 }
