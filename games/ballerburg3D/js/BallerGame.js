@@ -29,8 +29,13 @@ class BallerGame extends Engine {
             ammo: []
         };
 
+        // AI support - player types: 'human' or 'ai'
+        this.playerTypes = ['human', 'ai']; // Player 1 human, Player 2 AI by default
+        this.aiControllers = [null, null];
+
         // Turn management
         this._pendingTurnTimeout = null;
+        this._aiActionTimeout = null;
     }
 
     /**
@@ -54,6 +59,18 @@ class BallerGame extends Engine {
      */
     _initSystems() {
         this.particles = new ParticleSystem(this.scene, this.config);
+
+        // Initialize AI controllers for AI players
+        this.playerTypes.forEach((type, i) => {
+            if (type === 'ai') {
+                const personality = AIController.PERSONALITIES.BRUBBEL; // Default AI
+                this.aiControllers[i] = new AIController(this.config, {
+                    difficulty: personality.difficulty,
+                    personality: personality.personality
+                });
+                Debug.info(`AI Controller initialized for Player ${i + 1}`, personality);
+            }
+        });
     }
 
     /**
@@ -177,7 +194,8 @@ class BallerGame extends Engine {
      * Handle keyboard input
      */
     _onKeyDown(e) {
-        if (this.state.gameOver || this.projectile) return;
+        // Block input during game over, projectile flight, or AI turn
+        if (this.state.gameOver || this.projectile || this._isCurrentPlayerAI()) return;
 
         const cannon = this.cannons[this.state.currentPlayer];
         if (!cannon) return;
@@ -382,12 +400,126 @@ class BallerGame extends Engine {
             clearTimeout(this._pendingTurnTimeout);
             this._pendingTurnTimeout = null;
         }
+        if (this._aiActionTimeout) {
+            clearTimeout(this._aiActionTimeout);
+            this._aiActionTimeout = null;
+        }
 
         this.state.currentPlayer = (this.state.currentPlayer + 1) % this.config.GAMEPLAY.PLAYER_COUNT;
         this.state.turnTimer = this.config.TURNS.TIME_LIMIT;
         this._randomizeWind();
 
         Debug.info(`Turn: Player ${this.state.currentPlayer + 1}`);
+
+        // Trigger AI turn if current player is AI
+        if (this._isCurrentPlayerAI()) {
+            this._scheduleAIAction();
+        }
+    }
+
+    /**
+     * Check if current player is AI
+     */
+    _isCurrentPlayerAI() {
+        return this.playerTypes[this.state.currentPlayer] === 'ai';
+    }
+
+    /**
+     * Schedule AI action with thinking delay
+     */
+    _scheduleAIAction() {
+        const ai = this.aiControllers[this.state.currentPlayer];
+        if (!ai) return;
+
+        const delay = ai.getThinkDelay();
+        Debug.debug(`AI thinking for ${Math.round(delay)}ms...`);
+
+        this._aiActionTimeout = setTimeout(() => {
+            this._executeAITurn();
+        }, delay);
+    }
+
+    /**
+     * Execute AI turn
+     */
+    _executeAITurn() {
+        if (this.state.gameOver || this.projectile) return;
+
+        const ai = this.aiControllers[this.state.currentPlayer];
+        const cannon = this.cannons[this.state.currentPlayer];
+        if (!ai || !cannon) return;
+
+        // Get potential targets (enemy castle and cannons)
+        const targets = this._getAITargets();
+        if (targets.length === 0) return;
+
+        // Calculate shot
+        const firePos = cannon.getFirePosition();
+        const shot = ai.calculateShot(
+            { x: firePos.x, y: firePos.y },
+            targets,
+            this.state.wind,
+            this.config.PHYSICS.GRAVITY
+        );
+
+        if (!shot) {
+            Debug.warn('AI could not calculate shot');
+            return;
+        }
+
+        // Set cannon angle and fire
+        cannon.setAim(shot.angle, cannon.horizontalAngle);
+        this.state.power = Math.min(shot.power * 2, this.config.GAMEPLAY.MAX_POWER);
+
+        Debug.debug('AI firing', { angle: shot.angle, power: this.state.power, target: shot.targetType });
+
+        // Fire after brief aiming animation
+        setTimeout(() => {
+            if (!this.state.gameOver && !this.projectile) {
+                this._fire();
+            }
+        }, 300);
+    }
+
+    /**
+     * Get targets for AI to aim at
+     */
+    _getAITargets() {
+        const targets = [];
+        const enemyIdx = (this.state.currentPlayer + 1) % 2;
+        const enemyCastle = this.castles[enemyIdx];
+
+        if (enemyCastle && enemyCastle.alive) {
+            // Main castle as primary target
+            targets.push({
+                x: enemyCastle.position.x,
+                y: enemyCastle.position.y + 10,
+                type: 'castle',
+                priority: 10
+            });
+
+            // King position (top of castle)
+            targets.push({
+                x: enemyCastle.position.x,
+                y: enemyCastle.position.y + 20,
+                type: 'king',
+                priority: 15
+            });
+        }
+
+        // Enemy cannon as tactical target
+        const enemyCannon = this.cannons[enemyIdx];
+        if (enemyCannon && enemyCannon.mesh) {
+            const cannonPos = enemyCannon.getFirePosition();
+            targets.push({
+                x: cannonPos.x,
+                y: cannonPos.y,
+                type: 'cannon',
+                priority: 8
+            });
+        }
+
+        return targets;
     }
 
     /**
@@ -459,10 +591,14 @@ class BallerGame extends Engine {
      * Restart game
      */
     restart() {
-        // Clear pending timeout
+        // Clear pending timeouts
         if (this._pendingTurnTimeout) {
             clearTimeout(this._pendingTurnTimeout);
             this._pendingTurnTimeout = null;
+        }
+        if (this._aiActionTimeout) {
+            clearTimeout(this._aiActionTimeout);
+            this._aiActionTimeout = null;
         }
 
         // Dispose entities
@@ -504,6 +640,9 @@ class BallerGame extends Engine {
     dispose() {
         if (this._pendingTurnTimeout) {
             clearTimeout(this._pendingTurnTimeout);
+        }
+        if (this._aiActionTimeout) {
+            clearTimeout(this._aiActionTimeout);
         }
 
         if (this.projectile) this.projectile.dispose();

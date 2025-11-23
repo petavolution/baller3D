@@ -1059,6 +1059,122 @@ runner.describe('TrajectoryPreview', () => {
     });
 });
 
+// --- TrajectoryCalculator Tests ---
+// Based on BALLER2.C comp() function by Eckhard Kruse (1987)
+class TrajectoryCalculator {
+    static calculateTrajectory(source, target, gravity, wind = 0, options = {}) {
+        const dragFactor = options.dragFactor || 150;
+        const maxVelocity = options.maxVelocity || 50;
+
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const distance = Math.abs(dx);
+        const direction = dx > 0 ? 1 : -1;
+
+        const g = Math.abs(gravity) * 0.02;
+        const windTarget = wind * 0.5;
+
+        let bestVx = null;
+        let bestVy = null;
+        let x2 = -1;
+
+        for (let vx = 0.5; vx < maxVelocity && (x2 < distance || Math.abs(bestVy) / 3.5 > vx); vx += 0.4) {
+            let t = 0;
+            x2 = 0;
+            let vx2 = vx;
+
+            while (vx2 > 0 && x2 < distance) {
+                x2 += vx2;
+                vx2 += (windTarget - vx2) / dragFactor;
+                t++;
+            }
+
+            if (t > 0) {
+                bestVy = dy / t + 0.5 * g * t;
+                bestVx = vx;
+            }
+        }
+
+        if (bestVx === null) return null;
+
+        const finalVx = bestVx * direction;
+        const finalVy = bestVy;
+        const angle = Math.atan2(finalVy, Math.abs(finalVx)) * (180 / Math.PI);
+        const power = Math.sqrt(finalVx * finalVx + finalVy * finalVy);
+
+        return { vx: finalVx, vy: finalVy, angle, power, direction };
+    }
+
+    static addInaccuracy(trajectory, inaccuracy = 0.1) {
+        if (!trajectory) return null;
+        const factor = 1 + (Math.random() * 2 - 1) * inaccuracy;
+        return {
+            vx: trajectory.vx * factor,
+            vy: trajectory.vy * (1 + (Math.random() * 2 - 1) * inaccuracy),
+            angle: trajectory.angle,
+            power: trajectory.power * factor,
+            direction: trajectory.direction
+        };
+    }
+}
+
+global.TrajectoryCalculator = TrajectoryCalculator;
+
+runner.describe('TrajectoryCalculator', () => {
+    runner.test('TrajectoryCalculator calculates basic trajectory', () => {
+        const source = { x: 0, y: 20 };
+        const target = { x: 50, y: 20 };
+        const result = TrajectoryCalculator.calculateTrajectory(source, target, -9.8);
+        runner.assertDefined(result, 'Should return trajectory');
+        runner.assertTrue(result.vx > 0, 'Velocity should be positive for right target');
+        runner.assertEqual(result.direction, 1, 'Direction should be 1 (right)');
+    });
+
+    runner.test('TrajectoryCalculator handles left target', () => {
+        const source = { x: 100, y: 20 };
+        const target = { x: 50, y: 20 };
+        const result = TrajectoryCalculator.calculateTrajectory(source, target, -9.8);
+        runner.assertDefined(result, 'Should return trajectory');
+        runner.assertTrue(result.vx < 0, 'Velocity should be negative for left target');
+        runner.assertEqual(result.direction, -1, 'Direction should be -1 (left)');
+    });
+
+    runner.test('TrajectoryCalculator adjusts for height difference', () => {
+        const source = { x: 0, y: 10 };
+        const target = { x: 50, y: 30 }; // Higher target
+        const result = TrajectoryCalculator.calculateTrajectory(source, target, -9.8);
+        runner.assertDefined(result, 'Should return trajectory');
+        runner.assertTrue(result.vy > 0, 'Should have upward velocity for higher target');
+        runner.assertTrue(result.angle > 0, 'Angle should be positive for upward shot');
+    });
+
+    runner.test('TrajectoryCalculator compensates for wind', () => {
+        const source = { x: 0, y: 20 };
+        const target = { x: 50, y: 20 };
+        const noWind = TrajectoryCalculator.calculateTrajectory(source, target, -9.8, 0);
+        const withWind = TrajectoryCalculator.calculateTrajectory(source, target, -9.8, 5);
+        runner.assertDefined(noWind, 'No wind trajectory should exist');
+        runner.assertDefined(withWind, 'Wind trajectory should exist');
+        // Wind should affect the calculation
+        runner.assertTrue(noWind.vx !== withWind.vx || noWind.vy !== withWind.vy,
+            'Wind should affect trajectory calculation');
+    });
+
+    runner.test('TrajectoryCalculator.addInaccuracy modifies trajectory', () => {
+        const source = { x: 0, y: 20 };
+        const target = { x: 50, y: 20 };
+        const original = TrajectoryCalculator.calculateTrajectory(source, target, -9.8);
+        const modified = TrajectoryCalculator.addInaccuracy(original, 0.2);
+        runner.assertDefined(modified, 'Should return modified trajectory');
+        runner.assertEqual(modified.direction, original.direction, 'Direction should be preserved');
+    });
+
+    runner.test('TrajectoryCalculator.addInaccuracy handles null', () => {
+        const result = TrajectoryCalculator.addInaccuracy(null, 0.1);
+        runner.assertEqual(result, null, 'Should return null for null input');
+    });
+});
+
 // ============================================================================
 // Run Tests
 // ============================================================================
