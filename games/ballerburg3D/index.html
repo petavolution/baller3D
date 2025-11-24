@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ballerburg 3D - Engine Version</title>
+    <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="gameUI">
+        <div class="player-info">
+            <span id="currentPlayer">Player 1</span>
+            <span id="turnTimer">45</span>s
+        </div>
+        <div class="controls-info">
+            <div>Angle: <span id="angleValue">45</span>°</div>
+            <div>Direction: <span id="directionValue">0</span>°</div>
+            <div>Wind: <span id="windValue">0</span></div>
+        </div>
+        <div class="power-container">
+            <div id="powerBar"></div>
+            <span id="powerValue">0</span>
+        </div>
+        <div class="health-bars">
+            <div class="health-bar">
+                <span>P1</span>
+                <div class="bar"><div id="health1" style="width:100%"></div></div>
+            </div>
+            <div class="health-bar">
+                <span>P2</span>
+                <div class="bar"><div id="health2" style="width:100%"></div></div>
+            </div>
+        </div>
+        <div id="weaponSelector">
+            <button class="weapon-btn active" data-weapon="0">
+                <span class="weapon-icon">●</span>
+                <span class="weapon-name">Cannon</span>
+            </button>
+            <button class="weapon-btn" data-weapon="1">
+                <span class="weapon-icon">◉</span>
+                <span class="weapon-name">Explosive</span>
+            </button>
+            <button class="weapon-btn" data-weapon="2">
+                <span class="weapon-icon">○○</span>
+                <span class="weapon-name">Chain</span>
+            </button>
+            <button class="weapon-btn" data-weapon="3">
+                <span class="weapon-icon">☀</span>
+                <span class="weapon-name">Fire</span>
+            </button>
+            <button class="weapon-btn" data-weapon="4">
+                <span class="weapon-icon">■</span>
+                <span class="weapon-name">Stone</span>
+            </button>
+        </div>
+        <button id="fireBtn">FIRE</button>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="victoryText">Player 1 Wins!</h2>
+            <button onclick="game.restart()">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Scripts: Engine Load Order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <!-- 1. Engine Core (no dependencies) -->
+    <script src="../../engine/core/Utils.js"></script>
+    <script src="../../engine/core/Debug.js"></script>
+    <script src="../../engine/core/ConfigBase.js"></script>
+
+    <!-- 2. Engine Base Classes -->
+    <script src="../../engine/entities/Entity.js"></script>
+
+    <!-- 3. Engine World Systems -->
+    <script src="../../engine/world/Terrain.js"></script>
+
+    <!-- 4. Engine Physics Systems -->
+    <script src="../../engine/physics/ParticleSystem.js"></script>
+    <script src="../../engine/physics/Projectile.js"></script>
+    <script src="../../engine/physics/TrajectoryPreview.js"></script>
+
+    <!-- 5. Engine AI Systems -->
+    <script src="../../engine/ai/AIController.js"></script>
+
+    <!-- 6. Main Engine -->
+    <script src="../../engine/core/Engine.js"></script>
+    <script src="../../engine/game/BaseGameController.js"></script>
+
+    <!-- 7. Game-Specific Config -->
+    <script src="js/BallerConfig.js"></script>
+
+    <!-- 7. Game-Specific Entities (extend engine base classes) -->
+    <script src="js/BallerTerrain.js"></script>
+    <script src="js/Castle.js"></script>
+    <script src="js/Cannon.js"></script>
+
+    <!-- 8. Game Controller -->
+    <script src="js/BallerGame.js"></script>
+
+    <!-- 9. Start Game -->
+    <script>
+        let game;
+        try {
+            Debug.info('Starting Ballerburg 3D (Engine Version)');
+            game = new BallerGame();
+            game.init().start();
+            Debug.info('Game started successfully');
+        } catch (e) {
+            Debug.error('Failed to start game', { error: e.message, stack: e.stack });
+            console.error(e);
+        }
+    </script>
+</body>
+</html>

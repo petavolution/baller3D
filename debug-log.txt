@@ -1,0 +1,69 @@
+============================================================
+BALLERBURG 3D - TEST RESULTS
+============================================================
+Started: 2025-11-23T00:25:37.300Z
+
+  ✓ PASS: Config object exists
+  ✓ PASS: Config.TERRAIN_WIDTH is valid
+  ✓ PASS: Config.GRAVITY is negative
+  ✓ PASS: Config.WEAPONS has entries
+  ✓ PASS: Config.PLAYER_COUNT matches positions
+  ✓ PASS: Vector3 clone creates independent copy
+  ✓ PASS: Vector3 multiplyScalar works
+  ✓ PASS: Vector3 distanceTo is correct
+  ✓ PASS: Terrain generates heightMap
+  ✓ PASS: Terrain getHeight returns value for valid coords
+  ✓ PASS: Terrain getHeight returns -100 for out of bounds
+  ✓ PASS: Terrain damage modifies heightMap
+  ✓ PASS: Castle initializes with correct health
+  ✓ PASS: Castle has parts
+  ✓ PASS: Castle takeDamage reduces health
+  ✓ PASS: Castle dies at 0 health
+  ✓ PASS: Cannon initializes with default angles
+  ✓ PASS: Cannon setAim clamps values
+  ✓ PASS: Cannon getFireDirection returns normalized vector
+  ✓ PASS: Projectile initializes with cloned position
+  ✓ PASS: Projectile update applies gravity
+  ✓ PASS: Utils.clamp works correctly
+  ✓ PASS: Utils.lerp interpolates correctly
+  ✓ PASS: Utils.degToRad converts correctly
+  ✓ PASS: Entity initializes correctly
+  ✓ PASS: Entity.kill marks entity as dead
+  ✓ PASS: Entity.dispose is safe to call multiple times
+  ✓ PASS: DamageableEntity initializes with health
+  ✓ PASS: DamageableEntity.takeDamage reduces health
+  ✓ PASS: DamageableEntity dies at 0 health
+  ✓ PASS: DamageableEntity.heal increases health
+  ✓ PASS: DamageableEntity.heal caps at maxHealth
+  ✓ PASS: DamageableEntity.getHealthPercent returns correct value
+  ✓ PASS: createGameConfig merges with defaults
+  ✓ PASS: createGameConfig overrides defaults
+  ✓ PASS: createGameConfig preserves nested defaults
+  ✓ PASS: ParticleSystem initializes empty
+  ✓ PASS: ParticleSystem.createExplosion adds particles
+  ✓ PASS: ParticleSystem.createSplash adds particles
+  ✓ PASS: ParticleSystem.createSpeechBubble adds sprite
+  ✓ PASS: ParticleSystem.createDebris adds debris particles
+  ✓ PASS: ParticleSystem.clear removes all particles
+  ✓ PASS: TrajectoryPreview initializes empty
+  ✓ PASS: TrajectoryPreview.update generates points
+  ✓ PASS: TrajectoryPreview applies gravity to trajectory
+  ✓ PASS: TrajectoryPreview applies wind
+  ✓ PASS: TrajectoryPreview.clear removes all points
+  ✓ PASS: TrajectoryCalculator calculates basic trajectory
+  ✓ PASS: TrajectoryCalculator handles left target
+  ✓ PASS: TrajectoryCalculator adjusts for height difference
+  ✓ PASS: TrajectoryCalculator compensates for wind
+  ✓ PASS: TrajectoryCalculator.addInaccuracy modifies trajectory
+  ✓ PASS: TrajectoryCalculator.addInaccuracy handles null
+
+============================================================
+SUMMARY
+============================================================
+Total:  53
+Passed: 53
+Failed: 0
+Duration: 49ms
+============================================================
+ALL TESTS PASSED
+

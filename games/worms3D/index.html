@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Worms 3D</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        /* Worms-specific UI adjustments */
+        .phase-indicator {
+            background: rgba(0,0,0,0.7);
+            padding: 5px 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .phase-move { border-left: 4px solid #4CAF50; }
+        .phase-aim { border-left: 4px solid #FF9800; }
+        .phase-fire { border-left: 4px solid #f44336; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="gameUI">
+        <div class="player-info">
+            <span id="currentTeam">Team 1</span>
+            <span id="turnTimer">30</span>s
+        </div>
+        <div class="controls-info">
+            <div>Aim: <span id="aimValue">45</span>°</div>
+            <div>Phase: <span id="phaseValue">move</span></div>
+            <div>Wind: <span id="windValue">0</span></div>
+        </div>
+        <div class="power-container">
+            <div id="powerBar"></div>
+            <span id="powerValue">0</span>
+        </div>
+        <div id="weaponSelector">
+            <button class="weapon-btn active" data-weapon="0">
+                <span class="weapon-icon">🚀</span>
+                <span class="weapon-name">Bazooka</span>
+            </button>
+            <button class="weapon-btn" data-weapon="1">
+                <span class="weapon-icon">💣</span>
+                <span class="weapon-name">Grenade</span>
+            </button>
+            <button class="weapon-btn" data-weapon="2">
+                <span class="weapon-icon">🔫</span>
+                <span class="weapon-name">Shotgun</span>
+            </button>
+            <button class="weapon-btn" data-weapon="3">
+                <span class="weapon-icon">🧨</span>
+                <span class="weapon-name">Dynamite</span>
+            </button>
+            <button class="weapon-btn" data-weapon="4">
+                <span class="weapon-icon">✈️</span>
+                <span class="weapon-name">Airstrike</span>
+            </button>
+        </div>
+        <button id="fireBtn">FIRE</button>
+        <div class="controls-help" style="font-size: 10px; margin-top: 10px; opacity: 0.7;">
+            ←→: Move | ↑: Jump/Aim Up | ↓: Aim Down | Space: Aim/Charge | 1-5: Weapons
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="victoryText">Team 1 Wins!</h2>
+            <button onclick="game.restart()">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Scripts: Engine Load Order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <!-- 1. Engine Core -->
+    <script src="../../engine/core/Utils.js"></script>
+    <script src="../../engine/core/Debug.js"></script>
+    <script src="../../engine/core/ConfigBase.js"></script>
+
+    <!-- 2. Engine Base Classes -->
+    <script src="../../engine/entities/Entity.js"></script>
+
+    <!-- 3. Engine World Systems -->
+    <script src="../../engine/world/Terrain.js"></script>
+
+    <!-- 4. Engine Physics Systems -->
+    <script src="../../engine/physics/ParticleSystem.js"></script>
+    <script src="../../engine/physics/Projectile.js"></script>
+    <script src="../../engine/physics/TrajectoryPreview.js"></script>
+
+    <!-- 5. Main Engine -->
+    <script src="../../engine/core/Engine.js"></script>
+    <script src="../../engine/game/BaseGameController.js"></script>
+
+    <!-- 6. Game-Specific Config -->
+    <script src="js/WormsConfig.js"></script>
+
+    <!-- 7. Game-Specific Entities -->
+    <script src="js/WormsTerrain.js"></script>
+    <script src="js/Worm.js"></script>
+
+    <!-- 8. Game Controller -->
+    <script src="js/WormsGame.js"></script>
+
+    <!-- 9. Start Game -->
+    <script>
+        let game;
+        try {
+            Debug.info('Starting Worms 3D');
+            game = new WormsGame();
+            game.init().start();
+            Debug.info('Game started successfully');
+        } catch (e) {
+            Debug.error('Failed to start game', { error: e.message, stack: e.stack });
+            console.error(e);
+        }
+    </script>
+</body>
+</html>
